@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrabble Board</title>
+    <style>
+        @font-face {
+            font-family: 'Eurostile';
+            src: url('../static/fonts/eurostile.TTF') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #2A6334; /* Dark green background */
+            font-family: 'Eurostile', sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .bottom-container {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .decorative-board {
+            display: grid;
+            z-index: 1; /* Behind the tiles board */
+            grid-template-columns: repeat(17, 40px);
+            grid-template-rows: repeat(17, 40px);
+            gap: 1px; /* Space between cells */
+            position: fixed;
+            border: 5px solid white; /* White grid lines */
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            color: #000; /* Black text for all cells */
+            background-color: #3F8E41; /* Default white background for cells */
+        }
+        .stand {
+            display: flex;
+            z-index: 2;
+            justify-content: center;
+            align-items: center;
+            margin: 20px;
+            gap: 10px; /* Space between cells */
+            display: grid;
+            grid-template-columns: repeat(7, 40px);
+            grid-template-rows: repeat(1, 40px);
+            background-color: #3F8E41;
+            width: fit-content;
+            height: fit-content;
+        }
+        .tile {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            z-index: 3; /* Behind the tiles board */
+            margin: 0px;
+            border-radius: 5px;
+            background-color: #c6ae89;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            user-select: none; /* Disable text selection */
+        }
+        .locked-tile {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            z-index: 3; /* Behind the tiles board */
+            margin: 0px;
+            border-radius: 5px;
+            background-color: #b88130;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            user-select: none; /* Disable text selection */
+        }
+        .tile .points {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 12px;
+            font-weight: normal;
+            user-select: none; /* Disable text selection */
+        }
+        .circularButton {
+            width: 40px; /* Half the size of the tile (40px) */
+            height: 40px; /* Half the size of the tile (40px) */
+            border-radius: 50%; /* Rounded button */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+        }
+        .rectButton {
+            padding: 10px 20px;
+            background-color: #ADD8E6; /* Light blue background */
+            border: 2px solid white; /* White border */
+            border-radius: 5px; /* Slightly rounded corners */
+            color: #00008B; /* Dark blue text */
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px; /* Space between buttons */
+        }
+        .rectButton:hover {
+            background-color: #87CEEB; /* Slightly darker blue on hover */
+        }
+        .points-box {
+            background-color: #3F8E41;
+            color: white;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            width: 60px;
+            height: 40px;
+            text-align: center;
+            align-content: center;
+        }
+        .stacked-container{
+            display: flex;
+            width: 400px; /* Set a fixed width for equal size */
+            height: 400px; /* Set a fixed height for equal size */
+            position: relative;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #3F8E41;
+            color: white;
+            text-align: center;
+            align-content: center;
+            margin-top: 20px; /* Add distance between the container and its parent */
+            padding: 20px; /* Add padding inside the container */
+            border: none; /* Remove border */
+            border-radius: 5px; /* Slightly rounded corners */
+        }
+        .stacked-item{
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #3F8E41;
+            color: white;
+            text-align: center;
+            padding: 10px 5px; /* Add padding inside the item */
+            margin: 10px 0; /* Add space between items */
+            border-radius: 5px; /* Slightly rounded corners */
+            width: 100%; /* Full width of the container */
+        }
+        .action-button{
+            background-color: #2A6334; /* Dark green background */
+            color: white;
+            text-align: center;
+            width: 100%; /* Full width of the container */
+            height: 100%; /* Full height of the container */
+            font-size: 18px; /* Increase font size */
+            border: none; /* Remove border */
+            border-radius: 5px; /* Slightly rounded corners */
+            cursor: pointer;
+            margin: 1%; /* Add space between buttons */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .action-button svg {
+            margin-top: 5px; /* Add some space between text and icon */
+        }
+        .action-button:hover {
+            background-color: #1E4D2B; /* Slightly darker green on hover */
+        }
+        .table-player-list {
+            display: grid;
+            gap: 10px; /* Space between cells */
+            grid-template-columns: repeat(1, 100%);
+            grid-template-rows: repeat(4, 40px);
+            background-color: #3F8E41;
+            width: 100%;
+            height: 100%;
+        }
+        .player-container {
+            height: 40px;
+            background-color: #2A6334; /* Dark green background */
+            color: white;
+            align-items: center;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            text-transform: uppercase;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+        }
+        .player-item {
+            background-color: #2A6334; /* Dark green background */
+            color: white;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!--div class="container">
+            <button class="circularButton" id="buttonSettings" onclick="openSettings()"></button>
+            <button class="circularButton" id="buttonAbout" onclick="openAbout()"></button>
+        </div-->
+        <div class="container" id="title">
+            <h1 style="color: white;">SCRABBLE</h1>
+            <h1 id="lobbyIDHeader" style="color: white; font-size: 15px; visibility: hidden;">Looby ID: <span id="lobbyIDSpan"> 000001 </span></h1>
+        </div>
+
+        <div class="stacked-container" id="stackedContainer">
+            <div class="stacked-item" id="selectionStackItem" style="visibility: visible; z-index: 1;">
+                <button class="action-button" onclick="navigateToNewGameStack()">
+                    Create New Game
+                    <br>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5V19M5 12H19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="action-button" onclick="navigateToJoinLobbyStack()">
+                    Join Game
+                    <br>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 4V16M12 16L8 12M12 16L16 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>   
+            </div>
+            <div class="stacked-item" id="newGameStackItem" style="visibility: hidden; z-index: 2; align-items: flex-start;">
+                <div  style="display: grid; flex-direction: row; width: 100%; height: 100%;" >
+                    <div class="table-player-list" id="tablePlayerList">
+                        <div class="player-container" id="playerContainer-1">
+                            <input type="text" id="inputPlayerName" class="form-control" placeholder="Enter Username" aria-label="Enter Username" aria-describedby="button-addon2" style="margin: 10px;"/>
+                            <button class="action-button" type="button" id="setPlayerNameButton" onclick="setPlayerName()">Set Name</button>
+                        </div>
+                        <div class="player-container"></div>
+                        <div class="player-container" style="background-color: transparent;" id="playerContainer-AddPlayer">
+                            <button class="action-button" type="button" id="addNewPlayerButton" onclick="addNewPlayer()">Add New Player</button>
+                        </div>
+                    </div>
+                    <button class="action-button" type="button" id="createGameButton" onclick="createGame()">Create Game</button>
+                </div>
+            </div>
+            <div class="stacked-item" id="joinLobbyStackItem" style="visibility: hidden; z-index: 3; align-items: flex-start;">
+                <div class="input-group">
+                    <input type="text" id="inputGameID" class="form-control" placeholder="Enter game ID" aria-label="Enter game ID" aria-describedby="button-addon2" style="margin-right: 10px;"></input>
+                    <button class="action-button" type="button" id="joinGameButton" style="margin-right: 5px; height: 40px;" onclick="joinGame()">Join</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+
+let gameID = '';
+let playerID = '';
+
+function openSettings() {
+}
+
+function openAbout() {
+}
+
+function navigateToNewGameStack() {
+    document.getElementById('selectionStackItem').style.visibility = 'hidden';
+    document.getElementById('newGameStackItem').style.visibility = 'visible';
+    document.getElementById('joinLobbyStackItem').style.visibility = 'hidden';
+
+    createNewGame();
+}
+
+function navigateToJoinLobbyStack() {
+    document.getElementById('selectionStackItem').style.visibility = 'hidden';
+    document.getElementById('newGameStackItem').style.visibility = 'hidden';
+    document.getElementById('joinLobbyStackItem').style.visibility = 'visible';
+}
+
+function createNewGame() {
+    fetch('/create-new-game', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            gameID = data.gameID;
+            playerID = data.playerID;
+            console.log(gameID);
+            console.log(playerID);
+            //redirectLobby(gameID, playerID);
+        } else {
+            alert('Unknown error: ' + data.message);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        return false;
+    });
+}
+
+function redirectLobby(gameID, playerID) {
+    fetch('/redirect-lobby', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ gameID: gameID, playerID: playerID })
+    })
+    .then(response => {
+        if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                response.json().then(data => {
+                    alert('Failed to redirect: ' + data.message);
+                });
+            }
+    })
+    .then(data => {
+        if (data.status === 'error') {
+            alert('Unknown error: ' + data.message);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        return false;
+    });
+}
+
+function joinGame() {
+    in_gameID = document.getElementById('inputGameID').value;
+
+    fetch('/join-game', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body:  JSON.stringify({ gameID: in_gameID})
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response from server:', data);
+        // Handle the response data
+        if (data.status === 'success') {
+            const baseUrl = window.location.origin;
+            gameID = data.gameID;
+            playerID = data.playerID;
+
+            window.location.href = `${baseUrl}${lobbyID}/`;
+            document.getElementById('lobbyIDSpan').textContent = lobbyID;
+            document.getElementById('lobbyIDHeader').style.visibility = 'visible';
+        } else {
+            alert('Unknown error: ' + data.message);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        return false;
+    });
+}
+
+function enterGame() {
+    fetch('/enter-game', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: {
+            'gameID': gameID,
+            'playerID': playerID
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Handle the response data
+        if (data.status === 'success') {
+            window.location.href = `/game/${baseUrl}/${gameID}/${playerID}/`;
+        } else {
+            alert('Cannot login game: ' + data.message);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        return false;
+    });
+}
+
+</script>
+
+</html>

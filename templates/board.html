@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrabble Board</title>
+    <style>
+        .board {
+            display: grid;
+            grid-template-columns: repeat(15, 40px);
+            grid-template-rows: repeat(15, 40px);
+            gap: 1px;
+            background-color: #000;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+        }
+        .double-letter { background-color: #ADD8E6; } /* Light Blue */
+        .triple-letter { background-color: #0000FF; } /* Dark Blue */
+        .double-word { background-color: #FFFF00; } /* Yellow */
+        .triple-word { background-color: #FF0000; } /* Red */
+        .center { background-color: #FFFF00; } /* Yellow for center double word */
+    </style>
+</head>
+<body>
+    <div class="board">
+        <!-- Generate the board cells -->
+        <script>
+            const specialCells = {
+                '3,0': 'triple-word', '11,0': 'triple-word', '0,3': 'triple-word', '14,3': 'triple-word',
+                '0,11': 'triple-word', '14,11': 'triple-word', '3,14': 'triple-word', '11,14': 'triple-word',
+                '5,1': 'triple-letter', '9,1': 'triple-letter', '1,5': 'triple-letter', '13,5': 'triple-letter',
+                '1,9': 'triple-letter', '13,9': 'triple-letter', '5,13': 'triple-letter', '9,13': 'triple-letter',
+                '7,7': 'center', '1,1': 'double-word', '2,2': 'double-word', '3,3': 'double-word', '4,4': 'double-word',
+                '10,10': 'double-word', '11,11': 'double-word', '12,12': 'double-word', '13,13': 'double-word',
+                '1,13': 'double-word', '2,12': 'double-word', '3,11': 'double-word', '4,10': 'double-word',
+                '10,4': 'double-word', '11,3': 'double-word', '12,2': 'double-word', '13,1': 'double-word',
+                '0,6': 'double-letter', '0,8': 'double-letter', '14,6': 'double-letter', '14,8': 'double-letter',
+                '6,0': 'double-letter', '8,0': 'double-letter', '6,14': 'double-letter', '8,14': 'double-letter',
+                '2,6': 'double-letter', '2,8': 'double-letter', '6,2': 'double-letter', '8,2': 'double-letter',
+                '6,12': 'double-letter', '8,12': 'double-letter', '12,6': 'double-letter', '12,8': 'double-letter'
+            };
+
+            for (let row = 0; row < 15; row++) {
+                for (let col = 0; col < 15; col++) {
+                    const cellClass = specialCells[`${row},${col}`] || '';
+                    document.write(`<div class="cell ${cellClass}"></div>`);
+                }
+            }
+        </script>
+    </div>
+</body>
+</html>
