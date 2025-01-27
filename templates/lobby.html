@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scrabble Board</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='libs/bootstrap-5.3/css/bootstrap.min.css') }}">
     <style>
         @font-face {
             font-family: 'Eurostile';
@@ -32,91 +33,6 @@
             display: flex;
             align-items: center;
             margin-top: 20px;
-        }
-        .decorative-board {
-            display: grid;
-            z-index: 1; /* Behind the tiles board */
-            grid-template-columns: repeat(17, 40px);
-            grid-template-rows: repeat(17, 40px);
-            gap: 1px; /* Space between cells */
-            position: fixed;
-            border: 5px solid white; /* White grid lines */
-        }
-        .cell {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
-            color: #000; /* Black text for all cells */
-            background-color: #3F8E41; /* Default white background for cells */
-        }
-        .stand {
-            display: flex;
-            z-index: 2;
-            justify-content: center;
-            align-items: center;
-            margin: 20px;
-            gap: 10px; /* Space between cells */
-            display: grid;
-            grid-template-columns: repeat(7, 40px);
-            grid-template-rows: repeat(1, 40px);
-            background-color: #3F8E41;
-            width: fit-content;
-            height: fit-content;
-        }
-        .tile {
-            position: relative;
-            width: 40px;
-            height: 40px;
-            z-index: 3; /* Behind the tiles board */
-            margin: 0px;
-            border-radius: 5px;
-            background-color: #c6ae89;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            font-weight: bold;
-            user-select: none; /* Disable text selection */
-        }
-        .locked-tile {
-            position: relative;
-            width: 40px;
-            height: 40px;
-            z-index: 3; /* Behind the tiles board */
-            margin: 0px;
-            border-radius: 5px;
-            background-color: #b88130;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            font-weight: bold;
-            user-select: none; /* Disable text selection */
-        }
-        .tile .points {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            font-size: 12px;
-            font-weight: normal;
-            user-select: none; /* Disable text selection */
-        }
-        .circularButton {
-            width: 40px; /* Half the size of the tile (40px) */
-            height: 40px; /* Half the size of the tile (40px) */
-            border-radius: 50%; /* Rounded button */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            padding: 0;
-            margin: 0;
         }
         .rectButton {
             padding: 10px 20px;
@@ -210,10 +126,10 @@
             height: 40px;
             background-color: #2A6334; /* Dark green background */
             color: white;
-            align-items: center;
+            align-items: left;
             text-align: center;
             display: flex;
-            justify-content: center;
+            justify-content: left;
             text-transform: uppercase;
         }
         .input-group {
@@ -236,7 +152,7 @@
         </div-->
         <div class="container" id="title">
             <h1 style="color: white;">SCRABBLE</h1>
-            <h1 id="lobbyIDHeader" style="color: white; font-size: 15px; visibility: hidden;">Looby ID: <span id="lobbyIDSpan"> 000001 </span></h1>
+            <h1 id="gameIDHeader" style="color: white; font-size: 15px; visibility: hidden;">Looby ID: <span id="gameIDSpan"> 000001 </span></h1>
         </div>
 
         <div class="stacked-container" id="stackedContainer">
@@ -260,15 +176,53 @@
                 <div  style="display: grid; flex-direction: row; width: 100%; height: 100%;" >
                     <div class="table-player-list" id="tablePlayerList">
                         <div class="player-container" id="playerContainer-1">
-                            <input type="text" id="inputPlayerName" class="form-control" placeholder="Enter Username" aria-label="Enter Username" aria-describedby="button-addon2" style="margin: 10px;"/>
-                            <button class="action-button" type="button" id="setPlayerNameButton" onclick="setPlayerName()">Set Name</button>
+                            <span >Player 1</span>
+                            <div class="form-group">
+                                <input type="email" class="form-control" id="inputUserName" aria-describedby="emailHelp" placeholder="Enter Username">
+                            </div>
+                            <!--input type="text" id="inputPlayerName" class="form-control" placeholder="Enter Username" aria-label="Enter Username" aria-describedby="button-addon2" style="margin: 10px;"/-->
                         </div>
-                        <div class="player-container"></div>
-                        <div class="player-container" style="background-color: transparent;" id="playerContainer-AddPlayer">
-                            <button class="action-button" type="button" id="addNewPlayerButton" onclick="addNewPlayer()">Add New Player</button>
+                        <div class="player-container">
+                            <div class="dropdown">
+                                <span >Player 2</span>
+                                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownPlayerType2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Player Type
+                                </button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownPlayerType2">
+                                    <a class="dropdown-item" href="#">Empty</a>
+                                    <a class="dropdown-item" href="#">AI</a>
+                                    <a class="dropdown-item" href="#">Human</a>
+                                </div>
+                              </div>
+                        </div>
+                        <div class="player-container">
+                            <div class="dropdown">
+                                <span >Player 3</span>
+                                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownPlayerType3" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Player Type
+                                </button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownPlayerType3">
+                                    <a class="dropdown-item" href="#">Empty</a>
+                                    <a class="dropdown-item" href="#">AI</a>
+                                    <a class="dropdown-item" href="#">Human</a>
+                                </div>
+                              </div>
+                        </div>
+                        <div class="player-container">
+                            <div class="dropdown">
+                                <span >Player 3</span>
+                                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownPlayerType4" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Player Type
+                                </button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownPlayerType4">
+                                    <a class="dropdown-item" href="#">Empty</a>
+                                    <a class="dropdown-item" href="#">AI</a>
+                                    <a class="dropdown-item" href="#">Human</a>
+                                </div>
+                              </div>
                         </div>
                     </div>
-                    <button class="action-button" type="button" id="createGameButton" onclick="createGame()">Create Game</button>
+                    <button class="action-button" type="button" id="createGameButton" onclick="createNewGame()">Create Game</button>
                 </div>
             </div>
             <div class="stacked-item" id="joinLobbyStackItem" style="visibility: hidden; z-index: 3; align-items: flex-start;">
@@ -277,6 +231,9 @@
                     <button class="action-button" type="button" id="joinGameButton" style="margin-right: 5px; height: 40px;" onclick="joinGame()">Join</button>
                 </div>
             </div>
+            <div class="stacked-item" id="lobbyStackItem" style="visibility: hidden; z-index: 4; align-items: flex-start;">
+            </div>
+
         </div>
     </div>
 </body>
@@ -285,6 +242,10 @@
 
 let gameID = '';
 let playerID = '';
+let isAdmin= false;
+let playerUsername = '';
+let playerTypes = [];
+
 
 function openSettings() {
 }
@@ -296,31 +257,80 @@ function navigateToNewGameStack() {
     document.getElementById('selectionStackItem').style.visibility = 'hidden';
     document.getElementById('newGameStackItem').style.visibility = 'visible';
     document.getElementById('joinLobbyStackItem').style.visibility = 'hidden';
-
-    createNewGame();
+    document.getElementById('lobbyStackItem').style.visibility = 'hidden';
 }
 
 function navigateToJoinLobbyStack() {
     document.getElementById('selectionStackItem').style.visibility = 'hidden';
     document.getElementById('newGameStackItem').style.visibility = 'hidden';
     document.getElementById('joinLobbyStackItem').style.visibility = 'visible';
+    document.getElementById('lobbyStackItem').style.visibility = 'hidden';
+}
+
+function navigateToLobbyStack() {
+    document.getElementById('selectionStackItem').style.visibility = 'hidden';
+    document.getElementById('newGameStackItem').style.visibility = 'hidden';
+    document.getElementById('joinLobbyStackItem').style.visibility = 'hidden';
+    document.getElementById('lobbyStackItem').style.visibility = 'visible';
 }
 
 function createNewGame() {
+    playerUsername = document.getElementById('inputUserName').value;
+
+    playerTypes.concat("Human");
+    playerTypes.concat(document.getElementById('dropdownPlayerType2').textContent);
+    playerTypes.concat(document.getElementById('dropdownPlayerType3').textContent);
+    playerTypes.concat(document.getElementById('dropdownPlayerType4').textContent);
+
+    const playerTypesJson = JSON.stringify(playerTypes);
+
     fetch('/create-new-game', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
+        body: playerTypesJson
     })
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
             gameID = data.gameID;
             playerID = data.playerID;
+            isAdmin = data.isAdmin;
+            
+            document.getElementById('gameIDSpan').textContent = gameID;
+            document.getElementById('gameIDHeader').style.visibility = 'visible';
+
             console.log(gameID);
             console.log(playerID);
-            //redirectLobby(gameID, playerID);
+            setPlayerName(gameID, playerID, playerUsername);
+            navigateToLobbyStack();
+        } else {
+            alert('Unknown error: ' + data.message);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        return false;
+    });
+}
+
+function setPlayerName(gameID, playerID, playerUsername) {
+    fetch('/set-player-name', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body:  JSON.stringify({ "gameID": gameID, "playerID": playerID, "playerName": playerUsername })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            gameID = data.gameID;
+            playerID = data.playerID;
+            playerUsername = data.playerUsername;
+            navigateToLobbyStack();
         } else {
             alert('Unknown error: ' + data.message);
             return false;
@@ -338,7 +348,7 @@ function redirectLobby(gameID, playerID) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ gameID: gameID, playerID: playerID })
+        body: JSON.stringify({ "gameID": gameID, "playerID": playerID })
     })
     .then(response => {
         if (response.redirected) {
@@ -369,7 +379,7 @@ function joinGame() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body:  JSON.stringify({ gameID: in_gameID})
+        body:  JSON.stringify({ "gameID": in_gameID})
     })
     .then(response => response.json())
     .then(data => {
@@ -379,6 +389,7 @@ function joinGame() {
             const baseUrl = window.location.origin;
             gameID = data.gameID;
             playerID = data.playerID;
+            isAdmin = data.isAdmin;
 
             window.location.href = `${baseUrl}${lobbyID}/`;
             document.getElementById('lobbyIDSpan').textContent = lobbyID;
