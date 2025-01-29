@@ -240,10 +240,62 @@
 
 <script>
 
-let gameID = '';
-let playerID = '';
-let isAdmin= false;
-let playerUsername = '';
+class Game {
+    gameID = '';
+    players = [];
+
+    constructor(gameID) {
+        this.gameID = gameID;
+        this.players = [];
+    }
+
+    getGameID() {
+        return this.gameID;
+    }
+
+    addPlayers(player) {
+        this.players.push(player);
+    }
+}
+
+class Player {
+    playerID = '';
+    playerName = '';
+    isAdmin = false;
+
+    constructor(playerID, playerName) {
+        this.playerID = playerID;
+        this.playerName = playerName;
+    }
+
+    getPlayerID() {
+        return this.playerID;
+    }
+
+    setPlayerID(playerID) {
+        this.playerID = playerID;
+    }
+
+    getPlayerName() {
+        return this.playerName;
+    }
+
+    setPlayerName(playerName) {
+        this.playerName = playerName;
+    }
+
+    setAdmin() {
+        this.isAdmin = true;
+    }
+
+    isAdmin() {
+        return this.isAdmin;
+    }
+}
+
+let myGame = null
+let myPlayer = null
+
 let playerTypes = [];
 
 
@@ -275,8 +327,6 @@ function navigateToLobbyStack() {
 }
 
 function createNewGame() {
-    playerUsername = document.getElementById('inputUserName').value;
-
     playerTypes.concat("Human");
     playerTypes.concat(document.getElementById('dropdownPlayerType2').textContent);
     playerTypes.concat(document.getElementById('dropdownPlayerType3').textContent);
@@ -294,16 +344,20 @@ function createNewGame() {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            gameID = data.gameID;
-            playerID = data.playerID;
-            isAdmin = data.isAdmin;
-            
-            document.getElementById('gameIDSpan').textContent = gameID;
+            if (myGame !== null) {
+                alert('Cannot create a new game again!')
+                return false;
+            }
+
+            myGame = new Game(data.gameID);
+            myPlayer = new Player(data.playerID, '');
+            myPlayer.setAdmin();
+
+            document.getElementById('gameIDSpan').textContent = myGame.getGameID();
             document.getElementById('gameIDHeader').style.visibility = 'visible';
 
-            console.log(gameID);
-            console.log(playerID);
-            setPlayerName(gameID, playerID, playerUsername);
+            playerUsername = document.getElementById('inputUserName').value;
+            setPlayerName(myGame.getGameID(), myPlayer.getPlayerID, playerUsername);
             navigateToLobbyStack();
         } else {
             alert('Unknown error: ' + data.message);
@@ -327,40 +381,9 @@ function setPlayerName(gameID, playerID, playerUsername) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            gameID = data.gameID;
-            playerID = data.playerID;
-            playerUsername = data.playerUsername;
+            myPlayer.setPlayerName(data.playerUsername)
             navigateToLobbyStack();
         } else {
-            alert('Unknown error: ' + data.message);
-            return false;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        return false;
-    });
-}
-
-function redirectLobby(gameID, playerID) {
-    fetch('/redirect-lobby', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ "gameID": gameID, "playerID": playerID })
-    })
-    .then(response => {
-        if (response.redirected) {
-                window.location.href = response.url;
-            } else {
-                response.json().then(data => {
-                    alert('Failed to redirect: ' + data.message);
-                });
-            }
-    })
-    .then(data => {
-        if (data.status === 'error') {
             alert('Unknown error: ' + data.message);
             return false;
         }
@@ -387,12 +410,16 @@ function joinGame() {
         // Handle the response data
         if (data.status === 'success') {
             const baseUrl = window.location.origin;
-            gameID = data.gameID;
-            playerID = data.playerID;
-            isAdmin = data.isAdmin;
+            if (myGame !== null) {
+                alert('Cannot join the game!')
+                return false;
+            }
 
-            window.location.href = `${baseUrl}${lobbyID}/`;
-            document.getElementById('lobbyIDSpan').textContent = lobbyID;
+            myGame = new Game(data.gameID);
+            myPlayer = new Player(data.playerID)
+
+            window.location.href = `${baseUrl}${myGame.getGameID()}/`;
+            document.getElementById('lobbyIDSpan').textContent = myGame.getGameID();
             document.getElementById('lobbyIDHeader').style.visibility = 'visible';
         } else {
             alert('Unknown error: ' + data.message);
