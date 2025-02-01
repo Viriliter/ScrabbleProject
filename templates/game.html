@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrabble Board</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        @font-face {
+            font-family: 'Eurostile';
+            src: url('../static/fonts/eurostile.TTF') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #2A6334; /* Dark green background */
+            font-family: 'Eurostile', sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .bottom-container {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .game-board {
+            display: grid;
+            z-index: 2; /* On top of the decorative board */
+            grid-template-columns: repeat(17, 40px);
+            grid-template-rows: repeat(17, 40px);
+            gap: 1px; /* Space between cells */
+            position: relative;
+            border: 5px solid white; /* White grid lines */
+        }
+        .leader-board {
+            display: grid;
+            width: 220px;
+            height: 300px;
+            gap: 10px;
+            background-color: #3F8E41;
+            align-items: center;
+            align-content: baseline;
+            margin: 10px;
+        }
+        .leader-board-table {
+            display: grid;
+            grid-template-columns: repeat(1, 100%);
+            grid-template-rows: repeat(5, 40px);
+            row-gap: 10px;
+        }
+        .player-item {
+            width: auto;
+            height: 100%;
+            background-color: #2A6334; /* Dark green background */
+            color: white;
+            align-items: center;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            text-transform: uppercase;
+            column-gap: 10px;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        .decorative-board {
+            display: grid;
+            z-index: 1; /* Behind the tiles board */
+            grid-template-columns: repeat(17, 40px);
+            grid-template-rows: repeat(17, 40px);
+            gap: 1px; /* Space between cells */
+            position: fixed;
+            border: 5px solid white; /* White grid lines */
+        }
+        .board::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            color: #000; /* Black text for all cells */
+            background-color: #3F8E41; /* Default white background for cells */
+        }
+        .transparent-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        .double-letter {
+            background-color: #bad5f1; /* Light Blue */
+            color: #000000; /* Black text for better contrast */
+        }
+        .triple-letter {
+            background-color: #52a1e1; /* Dark Blue */
+            color: #000000; /* Black text for better contrast */
+        }
+        .double-word {
+            background-color: #e2bd46; /* Yellow */
+            color: #000000; /* Black text for better contrast */
+        }
+        .triple-word {
+            background-color: #d43322; /* Red */
+            color: #000000; /* Black text for better contrast */
+        }
+        .center-cell {
+            background-color: #e2bd46; /* Yellow */
+            font-size: 14px;
+        }
+        .header-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            background-color: #2A6334; /* Light gray for headers */
+            color: #FFFFFF; /* Black text for better contrast */
+        }
+        .rack-container {
+            display: flex;
+            width: 100%;
+            height: auto;
+            align-items: center;
+            background-color: #3F8E41;
+            grid-template-columns: repeat(3, 40px);
+            grid-template-rows: repeat(1, 40px);
+            gap: 10px; /* Space between cells */
+        }
+        .rack {
+            display: flex;
+            z-index: 2;
+            justify-content: center;
+            align-items: center;
+            margin: 20px;
+            gap: 10px; /* Space between cells */
+            display: grid;
+            grid-template-columns: repeat(7, 40px);
+            grid-template-rows: repeat(1, 40px);
+            width: fit-content;
+            height: fit-content;
+        }
+        .rack-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        .tile {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            z-index: 3; /* Behind the tiles board */
+            margin: 0px;
+            border-radius: 5px;
+            background-color: #c6ae89;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            user-select: none; /* Disable text selection */
+        }
+        .locked-tile {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            z-index: 3; /* Behind the tiles board */
+            margin: 0px;
+            border-radius: 5px;
+            background-color: #b88130;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            user-select: none; /* Disable text selection */
+        }
+        .tile .points {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 12px;
+            font-weight: normal;
+            user-select: none; /* Disable text selection */
+        }
+        .circularButton {
+            width: 40px; /* Half the size of the tile (40px) */
+            height: 40px; /* Half the size of the tile (40px) */
+            border-radius: 50%; /* Rounded button */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+        }
+        .rectButton {
+            padding: 10px 20px;
+            background-color: #ADD8E6; /* Light blue background */
+            border: 2px solid white; /* White border */
+            border-radius: 5px; /* Slightly rounded corners */
+            color: #00008B; /* Dark blue text */
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px; /* Space between buttons */
+        }
+        .rectButton:hover {
+            background-color: #87CEEB; /* Slightly darker blue on hover */
+        }
+        .points-box {
+            background-color: #3F8E41;
+            color: white;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            width: 60px;
+            height: 40px;
+            text-align: center;
+            align-content: center;
+        }
+        #revertButton {
+            background-color: #ADD8E6; /* Light blue background */
+            border: 2px solid white; /* White border */
+        }
+        #revertButton svg {
+            fill: none;
+            stroke: #00008B; /* Dark blue color for the logo */
+        }
+        #revertButton:hover {
+            background-color: #87CEEB; /* Slightly darker blue on hover */
+        }
+        #approveButton {
+            background-color: green; /* Light blue background */
+            border: 2px solid white; /* White border */
+        }
+        #approveButton:hover {
+            background-color: lightgreen; /* Light blue background */
+        }
+        #skipTurnButton {
+            background-color: orangered; /* Light blue background */
+            border: 2px solid white; /* White border */
+        }
+        #skipTurnButton:hover {
+            background-color: orange; /* Light blue background */
+        }
+        #returnLobbyButton {
+            background-color: gray; /* Light blue background */
+            border: 2px solid white; /* White border */
+        }
+        #returnLobbyButton:hover {
+            background-color: lightgreen; /* Light blue background */
+        }
+
+    </style>
+</head>
+<body>     
+    <div class="container" style="display: grid; grid-template-columns: repeat(2, auto); grid-template-rows: repeat(1, auto)">
+        <div class="container">
+            <div class="container" style="margin-bottom: 20px;">
+                <!--button class="circularButton" id="returnLobbyButton" title="Return to Lobby">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 3H12V21H3V3Z" stroke="#FF0000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 12H8M18 12L16 8M18 12L16 16" stroke="#FF0000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button-->
+                <div class="points-box" id="pointBox">
+                    <span id="points">0</span>
+                </div>
+            </div>
+        
+            <div class="container">
+                <div class="decorative-board" id="decorativeBoard">
+                    <script>
+                        // Letters for column headers
+                        const columnHeaders = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', ''];
+                        const rowHeaders = ['', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', ''];
+                        
+                        // Define special cells with their corresponding full labels
+                        const specialCells = {
+                            '0,0': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '0,7': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '0,14': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '7,0': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '7,14': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '14,0': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '14,7': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '14,14': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            
+                            '1,5': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '1,9': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '5,1': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '5,5': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '5,9': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '5,13': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '9,1': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '9,5': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '9,9': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '9,13': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '13,5': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '13,9': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            
+                            '7,7': { type: 'center-cell', text: '★' },
+                            '1,1': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '2,2': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '3,3': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '4,4': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '10,10': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '11,11': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '12,12': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '13,13': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '1,13': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '2,12': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '3,11': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '4,10': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '10,4': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '11,3': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '12,2': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '13,1': { type: 'double-word', text: 'DOUBLE WORD' },
+    
+                            '0,3': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '0,11': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '2,6': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '2,8': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '3,0': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '3,7': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '3,14': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '6,2': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '6,6': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '6,8': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '6,12': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '7,3': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '7,11': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '8,2': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '8,6': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '8,8': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '8,12': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '11,0': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '11,7': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '11,14': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '12,6': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '12,8': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '14,3': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '14,11': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                        };
+    
+                        for (let row = 0; row < 17; row++) {
+                            for (let col = 0; col < 17; col++) {
+                                if (row == 0) {
+                                    const letter = columnHeaders[col];
+                                    document.write(`<div class="cell header-cell">${letter}</div>`);
+                                    continue;                       
+                                } 
+                                else if (row==16) {
+                                    const letter = columnHeaders[col];
+                                    document.write(`<div class="cell header-cell">${letter}</div>`);
+                                    continue;                       
+                                }
+                                else {
+                                    if (col == 0) {
+                                        document.write(`<div class="cell header-cell">${row}</div>`);
+                                        continue;                       
+                                    }
+                                    else if (col == 16) {
+                                        document.write(`<div class="cell header-cell">${row}</div>`);
+                                        continue;                       
+                                    }
+                                }
+    
+                                const cellInfo = specialCells[`${row-1},${col-1}`];
+                                const cellClass = cellInfo ? cellInfo.type : '';
+                                const cellText = cellInfo ? cellInfo.text : '';
+                                document.write(`<div class="cell ${cellClass}">${cellText}</div>`);
+                            }
+                        }
+                    </script>
+                </div>
+                <div class="game-board" id="gameBoard">
+                    <!-- Generate the game board cells -->
+                    <script>
+                        for (let row = 0; row < 17; row++) {
+                            for (let col = 0; col < 17; col++) {
+                                
+                                let cellLocation = '';
+                                if (row == 0 || row == 16 || col == 0 || col == 16) {
+                                } else {
+                                    cellLocation = 'cell_' + `${columnHeaders[col]}` + `${rowHeaders[row]}`
+                                }
+                                document.write(`<div location="${cellLocation}" class="transparent-cell" data-row="${row+1}" data-col="${col+1}"></div>`);
+                            }
+                        }
+                    </script>
+                </div>
+            </div>
+            
+            <div class="bottom-container">
+                <div class="rack-container">
+                    <button class="circularButton" id="shuffleButton" title="Shuffle">
+                        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.484 9.166 15 7h5m0 0-3-3m3 3-3 3M4 17h4l1.577-2.253M4 7h4l7 10h5m0 0-3 3m3-3-3-3"/>
+                          </svg>
+                    </button>
+                    <div class="rack" id="scrabbleRack">
+                    </div>
+                    <button class="circularButton" id="revertButton" title="Revert">
+                        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 14-4-4m4 4 4-4"/>
+                          </svg>
+                    </button>
+                </div>
+    
+                <div class="container" style="padding: 10px; margin-left: 50px; margin-top: 10px; margin-bottom: 10px; row-gap: 10px;">
+                    <button class="rectButton" id="skipTurnButton" title="Skip Turn">Skip Turn</button>
+                    <button class="rectButton" style="visibility: visible;" id="approveButton"  title="Approve">Approve</button>
+                </div>
+            </div>
+        </div>
+        <div class="leader-board">
+            <h1 style="color: white; text-align: center;">LEADERBOARD</h1>
+            <div class="leader-board-table" id="tableLeaderboard">
+                <div class="player-item">Player 1 <span> 43</span> </div>
+                <div class="player-item">Player 2 <span> 70</span> </div>
+                <div class="player-item">Player 3 <span> 25</span> </div>
+                <div class="player-item">Player 4 <span> 69</span> </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+<script>
+
+const socket = io.connect('https://127.0.0.1:5000');
+
+const letterPoints = new Map([
+    ['A', 1], ['B', 3], ['C', 3], ['D', 2], ['E', 1],
+    ['F', 4], ['G', 2], ['H', 4], ['I', 1], ['J', 8],
+    ['K', 5], ['L', 1], ['M', 3], ['N', 1], ['O', 1],
+    ['P', 3], ['Q', 10], ['R', 1], ['S', 1], ['T', 1],
+    ['U', 1], ['V', 4], ['W', 4], ['X', 8], ['Y', 4],
+    ['Z', 10], [' ', 0]
+]);
+
+const PlayerState = {
+    UNDEFINED:  0,   // The player has not been initialized yet
+    NOT_READY:  1,   // The player has entered lobby screen but not clicked the ready button yet
+    READY:      2,   // After player has clicked the ready button on lobby screen
+    WAITING:    3,   // Player is waiting for its next turn to play
+    PLAYING:    4,   // Player is playing its turn
+    WON:        5,   // Player has won the game
+    LOST:       6,   // Player has lost the game
+};
+
+class Game {
+    gameID = '';
+    players = [];
+
+    constructor(gameID) {
+        this.gameID = gameID;
+        this.players = [];
+    }
+
+    getGameID() {
+        return this.gameID;
+    }
+
+    addPlayers(player) {
+        this.players.push(player);
+    }
+}
+
+class Player {
+    playerID = -1;
+    playerName = '';
+    isAdmin = false;
+    playerState = PlayerState.UNDEFINED;
+
+    constructor(playerID, playerName) {
+        this.playerID = playerID;
+        this.playerName = playerName;
+    }
+
+    getPlayerID() {
+        return this.playerID;
+    }
+
+    setPlayerID(playerID) {
+        this.playerID = playerID;
+    }
+
+    getPlayerName() {
+        return this.playerName;
+    }
+
+    setPlayerName(playerName) {
+        this.playerName = playerName;
+    }
+
+    getPlayerState() {
+        return this.playerState;
+    }
+
+    setPlayerState(playerState) {
+        this.playerState = playerState;
+    }
+
+    setAdmin() {
+        this.isAdmin = true;
+    }
+
+    isAdmin() {
+        return this.isAdmin;
+    }
+}
+
+let myGame = null
+let myPlayer = null
+let playersMeta = null;
+
+let selectedTiles = [];
+let tileCounter = 0; // Initialize a counter for the tiles
+
+socket.on('update-game', function(data) {
+    playersMeta = data.playersMeta;
+    updateGame(data.playersMeta);
+});
+
+socket.on('update-board', function(data) {
+    updateBoard(data.board);
+});
+
+const letterCounts = new Map([
+    ['A', 9], ['B', 2], ['C', 2], ['D', 4], ['E', 12],
+    ['F', 2], ['G', 3], ['H', 2], ['I', 9], ['J', 1],
+    ['K', 1], ['L', 4], ['M', 2], ['N', 6], ['O', 8],
+    ['P', 2], ['Q', 1], ['R', 6], ['S', 4], ['T', 6],
+    ['U', 4], ['V', 2], ['W', 2], ['X', 1], ['Y', 2],
+    ['Z', 1], [' ', 2]
+]);
+
+// For debug purposes
+{
+    let totalTiles = 0;
+    letterCounts.forEach((count, letter) => {
+        totalTiles += count;
+    });
+
+    let myTiles = ['A', 'B', 'C', 'E', 'J', 'K', 'L'];
+    const scrabbleRack = document.getElementById('scrabbleRack');
+
+    // Add my tiles to the scrabble rack
+    myTiles.forEach((letter) => {
+        let points = letterPoints.get(letter);
+        const tile = createTile(letter, points);
+        scrabbleRack.appendChild(tile);
+    });
+}
+
+// Create the tile element
+function createTile(letter, points, id=-1, location = '') {
+    const tile = document.createElement('div');
+    tile.classList.add('tile');
+    tile.textContent = letter;  // Only the letter is shown on the tile
+    tile.setAttribute('location', location); // Set the location attribute
+    
+    // If no ID is provided, assign a new one
+    if (id === -1) {
+        id = tileCounter++;
+    }
+    tile.setAttribute('tileID', id); // Set the unique identifier attribute
+
+    // Add a span to display the points
+    const pointsSpan = document.createElement('span');
+    pointsSpan.classList.add('points');
+    pointsSpan.textContent = points;
+    tile.appendChild(pointsSpan);
+
+    //tile.draggable = true;
+
+    // Store the letter during drag
+    //tile.addEventListener('dragstart', dragStart);
+    //tile.addEventListener('dragend', dragEnd);
+
+    tile.addEventListener('mousedown', mouseDownHandler);
+    tile.addEventListener('click', clickHandler);
+
+    return tile;
+}
+
+// Drag and Drop functions
+
+function dragStart(event) {
+    const tile = event.target;
+    // Store only the letter (content) as the drag data
+    const letter = event.target.firstChild.textContent; // Only the letter, without any span
+    const parentElement = event.target.parentNode;
+
+    tile.classList.add('dragging'); // Add dragging class
+
+    event.dataTransfer.setData('text/plain', letter); // Only the letter
+    event.dataTransfer.setData('parentElement', parentElement.outerHTML);  // Store the entire tile's HTML
+    event.dataTransfer.effectAllowed = 'move';
+
+    event.dataTransfer.setDragImage(event.target, 20, 20); // Adjust offsets for better positioning
+}
+
+function dragEnd(event) {
+    const tile = event.target;
+    // Restore the tile's visibility after the drag operation
+    tile.classList.remove('dragging'); // Remove dragging class
+}
+
+function dragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+}
+
+function drop(event) {
+    event.preventDefault();
+
+    const letter = event.dataTransfer.getData('text/plain');  // Only the letter
+    const points = letterPoints.get(letter);  // Get points based on the letter
+    const parentElementHTML = event.dataTransfer.getData('parentElement');  // Get original tile's HTML
+    const dropTarget = event.target;
+
+    // Ensure dropTarget is a valid cell on the game board
+    if (dropTarget.classList.contains('transparent-cell') && !dropTarget.hasChildNodes()) {
+        console.log('Tile dropped successfully');
+
+        // Create a new tile and add it to the drop target
+        const tile = createTile(letter, points);
+        dropTarget.innerHTML = '';  // Clear the cell
+        dropTarget.appendChild(tile);  // Place the tile on the board
+
+        // Now we need to remove the tile from its original location
+        const parentDiv = document.createElement('div');
+        parentDiv.innerHTML = parentElementHTML;  // Parse the stored HTML
+        const myRack = parentDiv.querySelector('.rack');
+        const myCell = parentDiv.querySelector('.transparent-cell');
+
+        //if (myRack) {
+        //    myRack.removeChild(originalTile.querySelector('.tile'));  // Remove the tile from its original place
+        //}
+        //if (myCell) {
+        //    myCell.removeChild(originalTile.querySelector('.tile'));  // Remove the tile from its original place
+        //}
+    } else {
+        console.log('Invalid drop location. Returning tile to rack.');
+
+        // If not a valid drop, return the tile to the rack
+        const tile = createTile(letter, points);  // Create the tile again
+        const scrabbleRack = document.getElementById('scrabbleRack');
+
+        scrabbleRack.appendChild(tile);
+    }
+}
+
+// Mouse event handlers
+
+function mouseDownHandler(event) {
+    let tile = event.target;
+    if (!tile.classList.contains('tile')) {
+        tile = tile.closest('.tile');
+    }
+    if (tile) {
+        tile.classList.add('draggingTile'); // Add dragging class
+
+        document.addEventListener('mousemove', mouseMoveHandler);
+    }
+}
+
+function mouseMoveHandler(event) {
+    const tile = document.querySelector('.draggingTile');
+    if (tile) {
+        tile.style.position = 'absolute';
+        tile.style.left = `${event.pageX}px`;
+        tile.style.top = `${event.pageY}px`;
+        tile.style.zIndex = 1000; // Bring the tile to the front
+    }
+    document.addEventListener('mouseup', mouseUpHandler);
+}
+
+function checkBoardZone(target) {
+    if (target.classList.contains('transparent-cell')) {
+        
+        if (target.getAttribute('location')==='' || target.hasChildNodes()) return false;
+        else return true;
+    }
+    else return false;
+}
+
+function mouseUpHandler(event) {
+    const tile = document.querySelector('.draggingTile');
+
+    if (tile) {
+        let dropTarget = event.target;
+
+        const letter = tile.firstChild.textContent; // Only the letter, without any span
+        const points = letterPoints.get(letter);  // Get points based on the letter
+        const tileID = tile.getAttribute('tileID');
+        
+        if (tileID === null) {
+            tileID = tileCounter++;
+        }
+
+        const parentNode = tile.parentNode;
+
+        // Check if the drop target is a tile if it is return the tile to the rack
+        if (dropTarget.classList.contains('tile') || !checkBoardZone(dropTarget)) {
+            console.log('Place is already occupied. Returning tile to rack.');
+
+            // Remove the original tile from the scrabble rack
+            if (parentNode.contains(tile)) {
+                parentNode.removeChild(tile);
+            }
+
+            const returnTile = createTile(letter, points, tileID);  // Create the tile again
+            const scrabbleRack = document.getElementById('scrabbleRack');
+            scrabbleRack.appendChild(returnTile);
+
+            removeSelectedTile(tileID);
+        } else if (checkBoardZone(dropTarget)) {  // Check if the drop target is a valid cell on the game board
+            console.log('Tile placed successfully');
+
+            const cellLocation = dropTarget.getAttribute('location').split('_')[1];
+            console.log(cellLocation);
+
+            // Create a new tile and add it to the drop target
+            const newTile = createTile(letter, points, tileID, cellLocation);
+            dropTarget.innerHTML = '';  // Clear the cell
+            dropTarget.appendChild(newTile);  // Place the tile on the board
+            
+            // Remove the original tile from the scrabble rack
+            parentNode.removeChild(tile);
+
+            addSelectedTile(letter, tileID, cellLocation);
+            verifyWord(selectedTiles);
+            
+        } else if (dropTarget.classList.contains('rack')) {  // Check if the drop target is the scrabble rack
+            console.log('Tile placed rack');
+
+            // Create a new tile and add it to the drop target
+            const newTile = createTile(letter, points, tileID);
+            dropTarget.appendChild(newTile);  // Place the tile on the board
+            
+            // Remove the original tile from the scrabble rack
+            parentNode.removeChild(tile);
+
+            removeSelectedTile(tileID);
+        } else {  // If not a valid drop, return the tile to the rack
+            console.log('Invalid drop location. Returning tile to rack.');
+
+            // Remove the original tile from the scrabble rack
+            if (parentNode.contains(tile)) {
+                parentNode.removeChild(tile);
+            }
+
+            const returnTile = createTile(letter, points, tileID);  // Create the tile again
+            const scrabbleRack = document.getElementById('scrabbleRack');
+            scrabbleRack.appendChild(returnTile);
+
+            removeSelectedTile(tileID);
+        }
+
+        tile.classList.remove('draggingTile'); // Remove draggingTile class
+    }
+
+    document.removeEventListener('mousemove', mouseMoveHandler);
+    document.removeEventListener('mouseup', mouseUpHandler);
+}
+
+function clickHandler(event) {
+    const tile = event.target;
+    if (!tile.classList.contains('tile')) {
+    }
+}
+
+// Add event listeners to board cells
+const boardCells = document.querySelectorAll('.transparent-cell');
+boardCells.forEach(cell => {
+    cell.addEventListener('dragover', dragOver);
+    cell.addEventListener('drop', drop);
+});
+
+function addSelectedTile(letter, tileID, location) {
+    const existingTile = selectedTiles.find(t => t.tileID === tileID);
+    if (existingTile) {
+        // Update the location if the tile is already placed
+        existingTile.location = location;
+    } else {
+        // Add the new tile to the selectedTiles array
+        selectedTiles.push({letter, tileID, location});
+    }
+}
+
+function removeSelectedTile(tileID) {
+    selectedTiles = selectedTiles.filter(t => t.tileID !== tileID);
+}
+
+function verifyWord(tiles) {
+    tiles.forEach((letter, tileID, location) => {
+        console.log(letter, tileID, location);
+    }); 
+/*
+    const request = new XMLHttpRequest()
+    request.open("POST", "/verify-word", true);
+    request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    request.send(JSON.stringify(tiles));
+    request.onload = () => {
+        const response = JSON.parse(request.responseText)
+        console.log(response)
+    }   
+*/
+    const tilesJson = JSON.stringify(tiles);
+
+    fetch('/verify-word', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: tilesJson
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response from server:', data);
+        // Handle the response data
+        if (data.status === 'success') {
+            // Update the points box with the calculated points
+            if (data.points>0) {
+                document.getElementById('points').textContent = data.points;
+                alert('Word verified successfully!');
+                return true;
+            } else {
+                alert('Word verification failed!');
+                return false;
+            }
+        } else {
+            alert('Unknown error: ' + data.message);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        return false;
+    });
+}
+
+// User buttons
+
+document.getElementById('revertButton').addEventListener('click', revertTiles);
+
+// Add event listeners for the new buttons
+document.getElementById('approveButton').addEventListener('click', () => {
+    if (verifyWord(selectedTiles)) {
+        approve(selectedTiles);
+    }
+    console.log('Approve button clicked');
+    // Add your approve functionality here
+});
+
+document.getElementById('skipTurnButton').addEventListener('click', () => {
+    revertTiles();
+    approveWord();
+    console.log('Skip Turn button clicked');
+    // Add your skip turn functionality here
+});
+
+function getTiles() {
+}
+
+function updateLeaderboard(playersMeta_) {
+    if (!playersMeta_ || playersMeta_.length === 0) {
+        return;
+    }
+
+    const tableLeaderboard = document.getElementById('tableLeaderboard');
+    tableLeaderboard.innerHTML = ''; // Clear contents
+
+    const fragment = document.createDocumentFragment();
+
+    playersMeta_.forEach((player_, index) => {
+        const playerContainer = document.createElement('div');
+        playerContainer.classList.add('player-item');
+
+        if (player_.IS_ADMIN) {
+            const adminIndicator = document.createElement('span');
+            adminIndicator.style.margin = '10px';
+            adminIndicator.style.color = 'yellow';
+            adminIndicator.textContent = '★';
+            adminIndicator.title = 'Admin';
+            playerContainer.appendChild(adminIndicator);
+        } else {
+            const adminIndicator = document.createElement('span');
+            adminIndicator.style.margin = '10px';
+            adminIndicator.style.color = 'yellow';
+            adminIndicator.textContent = ' ';
+            adminIndicator.title = ' ';
+            playerContainer.appendChild(adminIndicator);
+        }
+
+        const playerName = document.createElement('span');
+        playerName.style.margin = '10px';
+        playerName.textContent = player_.PLAYER_NAME;
+        playerContainer.appendChild(playerName);
+
+        const playerPoint = document.createElement('span');
+        playerPoint.style.margin = '10px';
+        playerPoint.textContent = player_.PLAYER_POINT;
+        playerContainer.appendChild(playerPoint);
+
+        if (player_.PLAYER_STATE === PlayerState.WAITING) {
+            const stateIndicator = document.createElement('span');
+
+            playerContainer.appendChild(readyIndicator);
+        } else if (player_.PLAYER_STATE === PlayerState.PLAYING) {
+            const stateIndicator = document.createElement('span');
+            stateIndicator.innerHTML = " \
+                <svg class=\"w-6 h-6 text-gray-800 dark:text-white\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" fill=\"none\" viewBox=\"0 0 24 24\"> \
+                    <path stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z\"/> \
+                </svg> \
+            "
+
+            stateIndicator.style.margin = '10px';
+            stateIndicator.style.background = '#3F8E41';
+            stateIndicator.style.color = 'white';
+
+            playerContainer.appendChild(readyIndicator);
+        } else if (player_.PLAYER_STATE === PlayerState.WIN) {
+
+            
+        } else if (player_.PLAYER_STATE === PlayerState.LOST) {
+            playerName.style.textDecoration = 'line-through';
+            playerName.setAttribute('title', 'LOST');
+        } else {
+
+        }
+
+        if (myPlayer !== null && myPlayer.get_playerID() === player_.PLAYER_ID) {
+            playerName.style.fontWeight = 'bold';
+        }
+
+        fragment.appendChild(playerContainer);
+    });
+
+    tableLeaderboard.appendChild(fragment); // Batch update for performance
+}
+
+function updateUserControl(playersMeta_) {
+    if (!playersMeta_ || playersMeta_.length === 0) {
+        return;
+    }
+
+    playersMeta_.forEach((player_, index) => {
+        if (myPlayer !== null && myPlayer.get_playerID() === player_.PLAYER_ID) {
+            const skipTurnButton = document.getElementById('skipTurnButton');
+            skipTurnButton.setAttribute('')
+        }
+
+    });
+}
+
+function revertTiles() {
+    selectedTiles.forEach(tile => {
+        const scrabbleRack = document.getElementById('scrabbleRack');
+        const newTile = createTile(tile.letter, letterPoints.get(tile.letter), tile.tileID);
+
+        // Remove the tile from its parent if it has one
+        const parentElement = document.querySelector(`[location="${tile.location}"]`);
+        if (parentElement && parentElement.contains(newTile)) {
+            parentElement.removeChild(newTile);
+        }
+
+        scrabbleRack.appendChild(newTile);
+
+        const cell = document.querySelector(`[location="${tile.location}"]`);
+        if (cell) {
+            cell.innerHTML = '';  // Clear the cell
+        }
+    });
+    selectedTiles = [];
+}
+
+function approveWord(tiles=[]) {
+    if (myPlayer === null) return;
+
+    if (myPlayer.getPlayerState() !== PlayerState.PLAYING) return;
+
+    const tilesJson = JSON.stringify(tiles);
+
+    fetch('/approve-word', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: tilesJson
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response from server:', data);
+        // Handle the response data
+        if (data.status === 'success') {
+            // Update the points box with the calculated points
+            if (data.points>0) {
+                document.getElementById('points').textContent = data.points;
+                alert('Word verified successfully!');
+            } else {
+                alert('Word verification failed!');
+            }
+        } else {
+            alert('Unknown error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function requestLetter() {
+
+}
+
+function updateGame(playersMeta_) {
+    console.log('game updating...', playersMeta_);
+
+    if (!playersMeta_ || playersMeta_.length === 0) {
+        return;
+    }
+
+    updateLeaderboard(playersMeta_);
+    updateUserControl(playersMeta_);
+}
+
+function updateBoard(board_) {
+
+}
+
+</script>
+
+</html>
