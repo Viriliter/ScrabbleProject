@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scrabble Board</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='libs/bootstrap-5.3/css/bootstrap.min.css') }}">
+    <script src="{{ url_for('static', filename='libs/bootstrap-5.3/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <style>
         @font-face {
             font-family: 'Eurostile';
@@ -29,35 +31,41 @@
             justify-content: center;
             align-items: center;
         }
-        .bottom-container {
+        .game-title {
             display: flex;
+            z-index: 2;
+            justify-content: center;
             align-items: center;
-            margin-top: 20px;
+            margin: 20px;
+            gap: 10px; /* Space between cells */
+            display: grid;
+            grid-template-columns: repeat(8, 40px);
+            grid-template-rows: repeat(1, 40px);
+            width: fit-content;
+            height: fit-content;
         }
-        .rectButton {
-            padding: 10px 20px;
-            background-color: #ADD8E6; /* Light blue background */
-            border: 2px solid white; /* White border */
-            border-radius: 5px; /* Slightly rounded corners */
-            color: #00008B; /* Dark blue text */
-            font-weight: bold;
-            cursor: pointer;
-            margin-right: 10px; /* Space between buttons */
-        }
-        .rectButton:hover {
-            background-color: #87CEEB; /* Slightly darker blue on hover */
-        }
-        .points-box {
-            background-color: #3F8E41;
-            color: white;
-            border-radius: 5px;
-            padding: 10px 20px;
-            font-size: 18px;
-            font-weight: bold;
-            width: 60px;
+        .tile {
+            position: relative;
+            width: 40px;
             height: 40px;
-            text-align: center;
-            align-content: center;
+            z-index: 3; /* Behind the tiles board */
+            margin: 0px;
+            border-radius: 5px;
+            background-color: #c6ae89;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            user-select: none; /* Disable text selection */
+        }
+        .tile .points {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 12px;
+            font-weight: normal;
+            user-select: none; /* Disable text selection */
         }
         .stacked-container{
             display: flex;
@@ -91,7 +99,7 @@
             border-radius: 5px; /* Slightly rounded corners */
             width: 100%; /* Full width of the container */
         }
-        .action-button{
+        .button-lobby{
             background-color: #2A6334; /* Dark green background */
             color: white;
             text-align: center;
@@ -107,13 +115,13 @@
             justify-content: center;
             align-items: center;
         }
-        .action-button svg {
+        .button-lobby svg {
             margin-top: 5px; /* Add some space between text and icon */
         }
-        .action-button:hover {
+        .button-lobby:hover {
             background-color: #1E4D2B; /* Slightly darker green on hover */
         }
-        .table-player-list {
+        .table-lobby {
             display: grid;
             gap: 10px; /* Space between cells */
             grid-template-columns: repeat(1, 100%);
@@ -122,15 +130,17 @@
             width: 100%;
             height: 100%;
         }
-        .player-container {
+        .container-lobby {
             height: 40px;
             background-color: #2A6334; /* Dark green background */
             color: white;
-            align-items: left;
+            align-items: center;
             text-align: center;
             display: flex;
             justify-content: left;
             text-transform: uppercase;
+            column-gap: 10px;
+            border-radius: 10px;
         }
         .input-group {
             display: flex;
@@ -141,7 +151,9 @@
             color: white;
             text-align: center;
         }
-
+        .fixed-width-dropdown {
+            width: 150px; /* Set a fixed width for the dropdown button */
+        }
     </style>
 </head>
 <body>
@@ -151,20 +163,29 @@
             <button class="circularButton" id="buttonAbout" onclick="openAbout()"></button>
         </div-->
         <div class="container" id="title">
-            <h1 style="color: white;">SCRABBLE</h1>
+            <div class="game-title ">
+                <div class="tile">S<span class="points">1</span></div>
+                <div class="tile">C<span class="points">3</span></div>
+                <div class="tile">R<span class="points">1</span></div>
+                <div class="tile">A<span class="points">1</span></div>
+                <div class="tile">B<span class="points">3</span></div>
+                <div class="tile">B<span class="points">3</span></div>
+                <div class="tile">L<span class="points">1</span></div>
+                <div class="tile">E<span class="points">1</span></div>
+            </div>                                           
             <h1 id="gameIDHeader" style="color: white; font-size: 15px; visibility: hidden;">Looby ID: <span id="gameIDSpan"> 000001 </span></h1>
         </div>
 
         <div class="stacked-container" id="stackedContainer">
             <div class="stacked-item" id="selectionStackItem" style="visibility: visible; z-index: 1;">
-                <button class="action-button" onclick="navigateToNewGameStack()">
+                <button class="button-lobby" onclick="navigateToNewGameStack()">
                     Create New Game
                     <br>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 5V19M5 12H19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
-                <button class="action-button" onclick="navigateToJoinLobbyStack()">
+                <button class="button-lobby" onclick="navigateToJoinLobbyStack()">
                     Join Game
                     <br>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -174,71 +195,99 @@
             </div>
             <div class="stacked-item" id="newGameStackItem" style="visibility: hidden; z-index: 2; align-items: flex-start;">
                 <div  style="display: grid; flex-direction: row; width: 100%; height: 100%;" >
-                    <div class="table-player-list" id="tablePlayerList">
-                        <div class="player-container" id="playerContainer-1">
-                            <span >Player 1</span>
+                    <div class="table-lobby" id="tablePlayerList">
+                        <div class="container-lobby">
+                            <span style="margin: 10px;">Player 1</span>
                             <div class="form-group">
-                                <input type="email" class="form-control" id="inputUserName" aria-describedby="emailHelp" placeholder="Enter Username">
+                                <input type="text" class="form-control" id="inputPlayerName" placeholder="Enter Username"  style="text-align: center;">
                             </div>
-                            <!--input type="text" id="inputPlayerName" class="form-control" placeholder="Enter Username" aria-label="Enter Username" aria-describedby="button-addon2" style="margin: 10px;"/-->
+                            <span id="dummyPlayerType1" style="visibility: hidden;">HUMAN</span>
                         </div>
-                        <div class="player-container">
+                        <div class="container-lobby">
+                            <span style="margin: 10px;">Player 2</span>
                             <div class="dropdown">
-                                <span >Player 2</span>
-                                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownPlayerType2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Player Type
+                                <button class="btn btn-secondary btn-sm dropdown-toggle fixed-width-dropdown" type="button" id="dropdownPlayerType2" data-bs-toggle="dropdown"  aria-haspopup="true" aria-expanded="false">
+                                    EMPTY
                                 </button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownPlayerType2">
-                                    <a class="dropdown-item" href="#">Empty</a>
-                                    <a class="dropdown-item" href="#">AI</a>
-                                    <a class="dropdown-item" href="#">Human</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType2', 'EMPTY')">EMPTY</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType2', 'AI')">AI</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType2', 'HUMAN')">HUMAN</a>
                                 </div>
-                              </div>
+                            </div>
                         </div>
-                        <div class="player-container">
+                        <div class="container-lobby">
+                            <span style="margin: 10px;">Player 3</span>
                             <div class="dropdown">
-                                <span >Player 3</span>
-                                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownPlayerType3" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Player Type
+                                <button class="btn btn-secondary btn-sm dropdown-toggle fixed-width-dropdown" type="button" id="dropdownPlayerType3" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    EMPTY
                                 </button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownPlayerType3">
-                                    <a class="dropdown-item" href="#">Empty</a>
-                                    <a class="dropdown-item" href="#">AI</a>
-                                    <a class="dropdown-item" href="#">Human</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType3', 'EMPTY')">EMPTY</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType3', 'AI')">AI</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType3', 'HUMAN')">HUMAN</a>
                                 </div>
-                              </div>
+                            </div>
                         </div>
-                        <div class="player-container">
+                        <div class="container-lobby">
+                            <span style="margin: 10px;">Player 4</span>
                             <div class="dropdown">
-                                <span >Player 3</span>
-                                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownPlayerType4" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Player Type
+                                <button class="btn btn-secondary btn-sm dropdown-toggle fixed-width-dropdown" type="button" id="dropdownPlayerType4" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    EMPTY
                                 </button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownPlayerType4">
-                                    <a class="dropdown-item" href="#">Empty</a>
-                                    <a class="dropdown-item" href="#">AI</a>
-                                    <a class="dropdown-item" href="#">Human</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType4', 'EMPTY')">EMPTY</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType4', 'AI')">AI</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType4', 'HUMAN')">HUMAN</a>
                                 </div>
-                              </div>
+                            </div>
                         </div>
                     </div>
-                    <button class="action-button" type="button" id="createGameButton" onclick="createNewGame()">Create Game</button>
+                    <button class="button-lobby" type="button" style="width: auto; height: auto;" id="createGameButton" onclick="createNewGame()">Create Game</button>
                 </div>
             </div>
             <div class="stacked-item" id="joinLobbyStackItem" style="visibility: hidden; z-index: 3; align-items: flex-start;">
-                <div class="input-group">
-                    <input type="text" id="inputGameID" class="form-control" placeholder="Enter game ID" aria-label="Enter game ID" aria-describedby="button-addon2" style="margin-right: 10px;"></input>
-                    <button class="action-button" type="button" id="joinGameButton" style="margin-right: 5px; height: 40px;" onclick="joinGame()">Join</button>
+                <div class="table-lobby">
+                    <div class="container-lobby" style="align-items: center;">
+                        <div class="form-group" style="width: 100%; align-content: baseline;">
+                            <input type="text" class="form-control" id="inputGameID" placeholder="Enter Lobby ID" style="text-align: center;">
+                        </div>
+                    </div>
+                    <div class="container-lobby" style="align-items: center;">
+                        <div class="form-group" style="width: 100%; align-content: baseline;">
+                            <input type="text" class="form-control" id="inputJoinPlayerName" placeholder="Enter Username" style="text-align: center;">
+                        </div>
+                    </div>
+                    <button class="button-lobby" type="button" id="joinGameButton" style="width: auto; height: auto;" onclick="joinGame()">Join Game</button>
                 </div>
             </div>
-            <div class="stacked-item" id="lobbyStackItem" style="visibility: hidden; z-index: 4; align-items: flex-start;">
+            <div class="stacked-item" id="lobbyStackItem" style="visibility: hidden; z-index: 4; align-items: flex-start; justify-content: normal; display: grid; align-items: end;">
+                <div class="table-lobby" id="lobbyPlayerList"></div>
+                <button class="button-lobby" type="button" id="enterGameButton" style="width: auto; height: auto;" onclick="enterGame()">Enter Game</button>
             </div>
-
         </div>
     </div>
 </body>
 
 <script>
+
+function updateDropdownText(dropdownId, text) {
+    document.getElementById(dropdownId).innerText = text;
+}
+
+</script>
+
+<script>
+
+const PlayerState = {
+    UNDEFINED:  0,   // The player has not been initialized yet
+    NOT_READY:  1,   // The player has entered lobby screen but not clicked the ready button yet
+    READY:      2,   // After player has clicked the ready button on lobby screen
+    WAITING:    3,   // Player is waiting for its next turn to play
+    PLAYING:    4,   // Player is playing its turn
+    WON:        5,   // Player has won the game
+    LOST:       6,   // Player has lost the game
+};
 
 class Game {
     gameID = '';
@@ -259,7 +308,7 @@ class Game {
 }
 
 class Player {
-    playerID = '';
+    playerID = -1;
     playerName = '';
     isAdmin = false;
 
@@ -293,11 +342,16 @@ class Player {
     }
 }
 
+const socket = io.connect('https://127.0.0.1:5000');
+
 let myGame = null
 let myPlayer = null
+let playersMeta = null;
 
-let playerTypes = [];
-
+socket.on('update-lobby', function(data) {
+    playersMeta = data.playersMeta;
+    updateLobby(data.playersMeta);
+});
 
 function openSettings() {
 }
@@ -326,11 +380,87 @@ function navigateToLobbyStack() {
     document.getElementById('lobbyStackItem').style.visibility = 'visible';
 }
 
+function updateLobby(playersMeta_) {
+    console.log('lobby updating...', playersMeta_);
+
+    if (!playersMeta_ || playersMeta_.length === 0) {
+        return;
+    }
+
+    const lobbyPlayerList = document.getElementById('lobbyPlayerList');
+    lobbyPlayerList.innerHTML = ''; // Clear contents
+
+    const fragment = document.createDocumentFragment();
+
+    playersMeta_.forEach((player_, index) => {
+        const playerContainer = document.createElement('div');
+        playerContainer.classList.add('container-lobby');
+
+        const playerIndex = document.createElement('span');
+        playerIndex.style.margin = '10px';
+        playerIndex.textContent = `${index + 1}`;
+
+        const playerName = document.createElement('span');
+        playerName.style.margin = '10px';
+        playerName.textContent = player_.PLAYER_NAME ? player_.PLAYER_NAME : 'Waiting Player to Join';
+
+        playerContainer.appendChild(playerIndex);
+        playerContainer.appendChild(playerName);
+
+        console.log(player_.PLAYER_STATE);
+
+        if (player_.IS_ADMIN) {
+            const adminIndicator = document.createElement('span');
+            adminIndicator.style.margin = '10px';
+            adminIndicator.style.color = 'yellow';
+            adminIndicator.textContent = '★';
+            adminIndicator.title = 'Admin';
+            playerContainer.appendChild(adminIndicator);
+        }
+
+        if (player_.PLAYER_STATE == PlayerState.READY) {
+            const readyIndicator = document.createElement('span');
+            readyIndicator.style.margin = '10px';
+            readyIndicator.style.background = '#3F8E41';
+            readyIndicator.style.color = 'white';
+            readyIndicator.textContent = 'READY';
+            playerContainer.appendChild(readyIndicator);
+        }
+
+        fragment.appendChild(playerContainer);
+    });
+
+    lobbyPlayerList.appendChild(fragment); // Batch update for performance
+}
+
+function collectPlayerTypes() {
+        const playerTypes = [];
+        const playerTypeIds = ['dummyPlayerType1', 'dropdownPlayerType2', 'dropdownPlayerType3', 'dropdownPlayerType4'];
+
+        playerTypeIds.forEach(id => {
+            const playerTypeElement = document.getElementById(id);
+            if (playerTypeElement && playerTypeElement.textContent.trim() !== 'EMPTY') {
+                playerTypes.push(playerTypeElement.textContent.trim());
+            }
+        });
+
+        return playerTypes;
+}
+
 function createNewGame() {
-    playerTypes.concat("Human");
-    playerTypes.concat(document.getElementById('dropdownPlayerType2').textContent);
-    playerTypes.concat(document.getElementById('dropdownPlayerType3').textContent);
-    playerTypes.concat(document.getElementById('dropdownPlayerType4').textContent);
+    
+    const playerTypes = collectPlayerTypes();
+    const playerName = document.getElementById('inputPlayerName').value;
+
+    if (playerName == '') {
+        alert('Enter a Username');
+        return;
+    }
+
+    if (playerTypes.length <= 1) {
+        alert('Minimum number of player should be 2!');
+        return;
+    }
 
     const playerTypesJson = JSON.stringify(playerTypes);
 
@@ -355,10 +485,15 @@ function createNewGame() {
 
             document.getElementById('gameIDSpan').textContent = myGame.getGameID();
             document.getElementById('gameIDHeader').style.visibility = 'visible';
+            
+            playersMeta = data.playersMeta;
+            updateLobby(playersMeta)
 
-            playerUsername = document.getElementById('inputUserName').value;
-            setPlayerName(myGame.getGameID(), myPlayer.getPlayerID, playerUsername);
+            myPlayer.setPlayerName(playerName);
+            setPlayerName(myGame.getGameID(), myPlayer.getPlayerID(), myPlayer.getPlayerName());
+
             navigateToLobbyStack();
+            return true;
         } else {
             alert('Unknown error: ' + data.message);
             return false;
@@ -382,7 +517,6 @@ function setPlayerName(gameID, playerID, playerUsername) {
     .then(data => {
         if (data.status === 'success') {
             myPlayer.setPlayerName(data.playerUsername)
-            navigateToLobbyStack();
         } else {
             alert('Unknown error: ' + data.message);
             return false;
@@ -396,18 +530,28 @@ function setPlayerName(gameID, playerID, playerUsername) {
 
 function joinGame() {
     in_gameID = document.getElementById('inputGameID').value;
+    in_playerName = document.getElementById('inputJoinPlayerName').value;   
+
+    if (in_gameID == '') {
+        alert('Enter a Game ID');
+        return;
+    }
+
+    if (in_playerName == '') {
+        alert('Enter a Username');
+        return;
+    }
 
     fetch('/join-game', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body:  JSON.stringify({ "gameID": in_gameID})
+        body:  JSON.stringify({ "gameID": in_gameID, "playerType": "HUMAN"})
     })
     .then(response => response.json())
     .then(data => {
         console.log('Response from server:', data);
-        // Handle the response data
         if (data.status === 'success') {
             const baseUrl = window.location.origin;
             if (myGame !== null) {
@@ -416,11 +560,19 @@ function joinGame() {
             }
 
             myGame = new Game(data.gameID);
-            myPlayer = new Player(data.playerID)
+            myPlayer = new Player(data.playerID, '')
 
-            window.location.href = `${baseUrl}${myGame.getGameID()}/`;
-            document.getElementById('lobbyIDSpan').textContent = myGame.getGameID();
-            document.getElementById('lobbyIDHeader').style.visibility = 'visible';
+            document.getElementById('gameIDSpan').textContent = myGame.getGameID();
+            document.getElementById('gameIDHeader').style.visibility = 'visible';
+
+            playersMeta = data.playersMeta;
+            updateLobby(playersMeta)
+
+            myPlayer.setPlayerName(in_playerName);
+            setPlayerName(myGame.getGameID(), myPlayer.getPlayerID(), myPlayer.getPlayerName());
+
+            navigateToLobbyStack();
+            return true;
         } else {
             alert('Unknown error: ' + data.message);
             return false;
@@ -438,18 +590,20 @@ function enterGame() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: {
-            'gameID': gameID,
-            'playerID': playerID
+        body: JSON.stringify({'gameID': myGame.getGameID(), 'playerID': myPlayer.getPlayerID()})
+    })
+    .then(response => {
+        if (response.redirected) {
+            // Handle redirection
+            window.location.href = response.url;
+        } else {
+            return response.json();
         }
     })
-    .then(response => response.json())
     .then(data => {
         // Handle the response data
-        if (data.status === 'success') {
-            window.location.href = `/game/${baseUrl}/${gameID}/${playerID}/`;
-        } else {
-            alert('Cannot login game: ' + data.message);
+        if (data && data.status !== 'success') {
+            alert('Cannot enter the game: ' + data.message);
             return false;
         }
     })
