@@ -266,7 +266,7 @@ class PlayerMeta:
     PLAYER_STATE: PlayerState
     IS_ADMIN: bool
     PLAY_ORDER: int
-    PLAYER_POINT: int
+    PLAYER_POINTS: int
 
 class Player:
     __player_id: str = ''
@@ -871,6 +871,20 @@ def game(game_id: str, player_id: str) -> Response:
 
 @app.route("/game/<game_id>/<player_id>/verify-word", methods=["POST"])
 def verify_word(game_id: str, player_id: str) -> Response:
+    request_json = request.get_json()
+
+    tiles = request_json if isinstance(request_json, list) else []
+
+    # Print each tile's properties
+    for tile in tiles:
+        print(f"Letter: {tile['letter']}, ID: {tile['tileID']}, Location: {tile['location']}")
+
+    calculated_points = 10
+    
+    return jsonify({"status": "success", "points": calculated_points}), 200
+
+@app.route("/verify-word", methods=["POST"])
+def verify_word_debug() -> Response:
     request_json = request.get_json()
 
     tiles = request_json if isinstance(request_json, list) else []
