@@ -12,6 +12,13 @@
             font-weight: normal;
             font-style: normal;
         }
+        :root {
+            --tile-size: 42px;
+            --icon-size: 36px;
+            --text-color: white;
+            --background-color: #2A6334;  /* Dark green background */
+            --cell-color: #3F8E41;   /* Light green foreground */
+        }
 
         body {
             display: flex;
@@ -19,8 +26,18 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #2A6334; /* Dark green background */
+            background-color: var(--background-color);
             font-family: 'Eurostile', sans-serif;
+        }
+
+        /* Classes */
+
+        .top-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 20px;
         }
         .container {
             display: flex;
@@ -34,36 +51,43 @@
             align-items: center;
             margin-top: 20px;
         }
-        .game-board {
+        .game-board, .decorative-board{
             display: grid;
-            z-index: 2; /* On top of the decorative board */
-            grid-template-columns: repeat(17, 40px);
-            grid-template-rows: repeat(17, 40px);
-            gap: 1px; /* Space between cells */
-            position: relative;
+            grid-template-columns: repeat(17, var(--tile-size));
+            grid-template-rows: repeat(17, var(--tile-size));
+            gap: 3px; /* Space between cells */
             border: 5px solid white; /* White grid lines */
+        }
+        .game-board {
+            position: relative;
+            z-index: 2; /* On top of the decorative board */
+        }
+        .decorative-board {
+            position: fixed;
+            z-index: 1; /* Behind the tiles board */
         }
         .leader-board {
             display: grid;
             width: 220px;
             height: 300px;
             gap: 10px;
-            background-color: #3F8E41;
+            background-color: var(--cell-color);
             align-items: center;
             align-content: baseline;
             margin: 10px;
+            border-radius: 10px;
         }
         .leader-board-table {
             display: grid;
             grid-template-columns: repeat(1, 100%);
-            grid-template-rows: repeat(5, 40px);
+            grid-template-rows: repeat(5, var(--tile-size));
             row-gap: 10px;
         }
         .player-item {
             width: auto;
             height: 100%;
-            background-color: #2A6334; /* Dark green background */
-            color: white;
+            background-color: var(--background-color); /* Dark green background */
+            color: var(--text-color);
             align-items: center;
             text-align: center;
             display: flex;
@@ -73,47 +97,31 @@
             border-radius: 10px;
             margin: 10px;
         }
-        .decorative-board {
-            display: grid;
-            z-index: 1; /* Behind the tiles board */
-            grid-template-columns: repeat(17, 40px);
-            grid-template-rows: repeat(17, 40px);
-            gap: 1px; /* Space between cells */
-            position: fixed;
-            border: 5px solid white; /* White grid lines */
-        }
-        .board::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
+        .cell, .transparent-cell, .rack-cell, .header-cell {
+            display: flex;
+            width: var(--tile-size);
+            height: var(--tile-size);
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
         }
         .cell {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
             color: #000; /* Black text for all cells */
-            background-color: #3F8E41; /* Default white background for cells */
+            background-color: var(--cell-color);
+            border: 2px solid transparent;
+            box-sizing: border-box;
         }
         .transparent-cell {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-size: 9px;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
+            border: 2px solid transparent;
+            box-sizing: border-box;
+        }
+        .transparent-cell:hover {
+            border: 2px solid white;
+            cursor: pointer;
         }
         .double-letter {
             background-color: #bad5f1; /* Light Blue */
@@ -136,78 +144,75 @@
             font-size: 14px;
         }
         .header-cell {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            background-color: #2A6334; /* Light gray for headers */
-            color: #FFFFFF; /* Black text for better contrast */
+            background-color: var(--background-color);
+            color: white;
+            border: 2px solid transparent;
+        }
+        .header-cell:hover {
+            border: 2px solid transparent;
         }
         .rack-container {
             display: flex;
             width: 100%;
             height: auto;
             align-items: center;
-            background-color: #3F8E41;
-            grid-template-columns: repeat(3, 40px);
-            grid-template-rows: repeat(1, 40px);
+            background-color: var(--cell-color);
+            grid-template-columns: repeat(3, var(--tile-size));
+            grid-template-rows: repeat(1, var(--tile-size));
             gap: 10px; /* Space between cells */
+            border-radius: 10px;
+            justify-content: space-evenly;
         }
         .rack {
-            display: flex;
+            display: grid;
             z-index: 2;
             justify-content: center;
             align-items: center;
             margin: 20px;
             gap: 10px; /* Space between cells */
-            display: grid;
-            grid-template-columns: repeat(7, 40px);
-            grid-template-rows: repeat(1, 40px);
+            grid-template-columns: repeat(7, var(--tile-size));
+            grid-template-rows: repeat(1, var(--tile-size));
             width: fit-content;
             height: fit-content;
         }
         .rack-cell {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-size: 9px;
+        }
+        .tile, .locked-tile {
+            display: flex;
+            position: relative;
+            width: var(--tile-size);
+            height: var(--tile-size);
+            z-index: 3; /* Behind the tiles board */
+            border-radius: 5px;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
             font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
+            user-select: none; /* Disable text selection */
         }
         .tile {
-            position: relative;
-            width: 40px;
-            height: 40px;
-            z-index: 3; /* Behind the tiles board */
-            margin: 0px;
-            border-radius: 5px;
             background-color: #c6ae89;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            font-weight: bold;
-            user-select: none; /* Disable text selection */
+            box-sizing: border-box;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+        .dragging-tile{
+            position: fixed;
+        }
+        .tile:hover {
+            background-color: #b98a43;
+            border: 2px solid white;
+        }
+        .tile:active {
+            background-color: #b88130;
+            border: 2px solid white;
+            font-weight: bolder;
         }
         .locked-tile {
-            position: relative;
-            width: 40px;
-            height: 40px;
-            z-index: 3; /* Behind the tiles board */
             margin: 0px;
-            border-radius: 5px;
             background-color: #b88130;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            font-weight: bold;
-            user-select: none; /* Disable text selection */
+
         }
         .tile .points {
             position: absolute;
@@ -217,90 +222,113 @@
             font-weight: normal;
             user-select: none; /* Disable text selection */
         }
-        .circularButton {
-            width: 40px; /* Half the size of the tile (40px) */
-            height: 40px; /* Half the size of the tile (40px) */
-            border-radius: 50%; /* Rounded button */
+        .circular-button {
             display: flex;
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            border-radius: 50%; /* Rounded button */
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            padding: 0;
-            margin: 0;
         }
-        .rectButton {
+        .rect-button {
+            display: flow-root;
+            width: 150px;
             padding: 10px 20px;
             background-color: #ADD8E6; /* Light blue background */
+            color: #00008B; /* Dark blue text */
             border: 2px solid white; /* White border */
             border-radius: 5px; /* Slightly rounded corners */
-            color: #00008B; /* Dark blue text */
+            text-align: center;
             font-weight: bold;
             cursor: pointer;
-            margin-right: 10px; /* Space between buttons */
         }
-        .rectButton:hover {
+        .rect-button:hover {
             background-color: #87CEEB; /* Slightly darker blue on hover */
         }
-        .points-box {
-            background-color: #3F8E41;
-            color: white;
-            border-radius: 5px;
-            padding: 10px 20px;
-            font-size: 18px;
-            font-weight: bold;
-            width: 60px;
-            height: 40px;
-            text-align: center;
-            align-content: center;
-        }
+
+        /* Objects */
+
         #revertButton {
             background-color: #ADD8E6; /* Light blue background */
             border: 2px solid white; /* White border */
         }
         #revertButton svg {
-            fill: none;
-            stroke: #00008B; /* Dark blue color for the logo */
+            width: var(--icon-size);
+            height: var(--icon-size);
+            fill: #2d425d;
+            stroke: none; /* Dark blue color for the logo */
         }
         #revertButton:hover {
             background-color: #87CEEB; /* Slightly darker blue on hover */
         }
+        #shuffleButton {
+            background-color: #dabf52; /* Light yellow background */
+            border: 2px solid white; /* White border */
+        }
+        #shuffleButton svg {
+            width: var(--icon-size);
+            height: var(--icon-size);
+            fill: #3c361a;
+            stroke: none; /* Dark blue color for the logo */
+        }
+        #shuffleButton:hover {
+            background-color: #b69f42; /* Slightly darker yellow on hover */
+        }
         #approveButton {
             background-color: green; /* Light blue background */
-            border: 2px solid white; /* White border */
         }
         #approveButton:hover {
             background-color: lightgreen; /* Light blue background */
         }
         #skipTurnButton {
             background-color: orangered; /* Light blue background */
-            border: 2px solid white; /* White border */
         }
         #skipTurnButton:hover {
             background-color: orange; /* Light blue background */
         }
+        .points-box {
+            width: 60px;
+            height: 40px;
+            padding: 10px 20px;
+            align-content: center;
+            background-color: var(--cell-color);
+            color: var(--text-color);
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
         #returnLobbyButton {
-            background-color: gray; /* Light blue background */
+            width: 100px;
+            height: 60px;
+            background-color: red; /* Light blue background */
             border: 2px solid white; /* White border */
         }
+        #returnLobbyButton svg {
+            width: var(--icon-size);
+            height: var(--icon-size);
+            fill: white;
+            stroke: none;
+        }
         #returnLobbyButton:hover {
-            background-color: lightgreen; /* Light blue background */
+            background-color: #f25433; /* Light blue background */
         }
 
     </style>
 </head>
 <body>     
-    <div class="container" style="display: grid; grid-template-columns: repeat(2, auto); grid-template-rows: repeat(1, auto)">
+    <div class="container" style="display: grid; grid-template-columns: repeat(2, auto); grid-template-rows: repeat(1, auto); align-items: start;">
         <div class="container">
-            <div class="container" style="margin-bottom: 20px;">
-                <!--button class="circularButton" id="returnLobbyButton" title="Return to Lobby">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 3H12V21H3V3Z" stroke="#FF0000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M16 12H8M18 12L16 8M18 12L16 16" stroke="#FF0000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button-->
+            <div class="top-container">
+                <button class="rect-button" id="returnLobbyButton" title="Return to Lobby">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
+                </button>
                 <div class="points-box" id="pointBox">
-                    <span id="points">0</span>
+                    <span id="myPlayerPoints">0</span>
                 </div>
+                <div></div>
             </div>
         
             <div class="container">
@@ -382,21 +410,21 @@
                             for (let col = 0; col < 17; col++) {
                                 if (row == 0) {
                                     const letter = columnHeaders[col];
-                                    document.write(`<div class="cell header-cell">${letter}</div>`);
+                                    document.write(`<div class="header-cell">${letter}</div>`);
                                     continue;                       
                                 } 
                                 else if (row==16) {
                                     const letter = columnHeaders[col];
-                                    document.write(`<div class="cell header-cell">${letter}</div>`);
+                                    document.write(`<div class="header-cell">${letter}</div>`);
                                     continue;                       
                                 }
                                 else {
                                     if (col == 0) {
-                                        document.write(`<div class="cell header-cell">${row}</div>`);
+                                        document.write(`<div class="header-cell">${row}</div>`);
                                         continue;                       
                                     }
                                     else if (col == 16) {
-                                        document.write(`<div class="cell header-cell">${row}</div>`);
+                                        document.write(`<div class="header-cell">${row}</div>`);
                                         continue;                       
                                     }
                                 }
@@ -429,28 +457,24 @@
             
             <div class="bottom-container">
                 <div class="rack-container">
-                    <button class="circularButton" id="shuffleButton" title="Shuffle">
-                        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.484 9.166 15 7h5m0 0-3-3m3 3-3 3M4 17h4l1.577-2.253M4 7h4l7 10h5m0 0-3 3m3-3-3-3"/>
-                          </svg>
+                    <button class="circular-button" id="shuffleButton" title="Shuffle">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M560-160v-80h104L537-367l57-57 126 126v-102h80v240H560Zm-344 0-56-56 504-504H560v-80h240v240h-80v-104L216-160Zm151-377L160-744l56-56 207 207-56 56Z"/></svg>
                     </button>
                     <div class="rack" id="scrabbleRack">
                     </div>
-                    <button class="circularButton" id="revertButton" title="Revert">
-                        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 14-4-4m4 4 4-4"/>
-                          </svg>
+                    <button class="circular-button" id="revertButton" title="Revert">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m 600,-200 -56,-57 143,-143 H 300 q -75,0 -127.5,-52.5 Q 120,-505 120,-580 120,-655 172.5,-707.5 225,-760 300,-760 h 20 v 80 h -20 q -42,0 -71,29 -29,29 -29,71 0,42 29,71 29,29 71,29 h 387 l -143,-144 56,-56 240,240 z"/></svg>
                     </button>
                 </div>
     
                 <div class="container" style="padding: 10px; margin-left: 50px; margin-top: 10px; margin-bottom: 10px; row-gap: 10px;">
-                    <button class="rectButton" id="skipTurnButton" title="Skip Turn">Skip Turn</button>
-                    <button class="rectButton" style="visibility: visible;" id="approveButton"  title="Approve">Approve</button>
+                    <button class="rect-button" id="skipTurnButton" title="Skip Turn">Skip Turn</button>
+                    <button class="rect-button" style="visibility: visible;" id="approveButton"  title="Approve">Approve <span id="tentativePoints"></span></button>
                 </div>
             </div>
         </div>
-        <div class="leader-board">
-            <h1 style="color: white; text-align: center;">LEADERBOARD</h1>
+        <div class="leader-board" style="margin-top: 80px;">
+            <h1 style="color: var(--text-color); text-align: center;">LEADERBOARD</h1>
             <div class="leader-board-table" id="tableLeaderboard">
                 <div class="player-item">Player 1 <span> 43</span> </div>
                 <div class="player-item">Player 2 <span> 70</span> </div>
@@ -459,7 +483,6 @@
             </div>
         </div>
     </div>
-
 </body>
 
 <script>
@@ -596,6 +619,7 @@ function createTile(letter, points, id=-1, location = '') {
     tile.classList.add('tile');
     tile.textContent = letter;  // Only the letter is shown on the tile
     tile.setAttribute('location', location); // Set the location attribute
+    tile.style.position = 'relative'; 
     
     // If no ID is provided, assign a new one
     if (id === -1) {
@@ -635,7 +659,7 @@ function dragStart(event) {
     event.dataTransfer.setData('parentElement', parentElement.outerHTML);  // Store the entire tile's HTML
     event.dataTransfer.effectAllowed = 'move';
 
-    event.dataTransfer.setDragImage(event.target, 20, 20); // Adjust offsets for better positioning
+    //event.dataTransfer.setDragImage(event.target, 20, 20); // Adjust offsets for better positioning
 }
 
 function dragEnd(event) {
@@ -697,18 +721,19 @@ function mouseDownHandler(event) {
         tile = tile.closest('.tile');
     }
     if (tile) {
-        tile.classList.add('draggingTile'); // Add dragging class
+        tile.classList.add('dragging-tile'); // Add dragging class
+        tile.classList.remove('placed-tile'); // Remove placed-tile class
 
         document.addEventListener('mousemove', mouseMoveHandler);
     }
 }
 
 function mouseMoveHandler(event) {
-    const tile = document.querySelector('.draggingTile');
+    const tile = document.querySelector('.dragging-tile');
     if (tile) {
-        tile.style.position = 'absolute';
-        tile.style.left = `${event.pageX}px`;
-        tile.style.top = `${event.pageY}px`;
+        tile.style.position = 'fixed';
+        tile.style.left = `${event.pageX+2}px`;
+        tile.style.top = `${event.pageY+2}px`;
         tile.style.zIndex = 1000; // Bring the tile to the front
     }
     document.addEventListener('mouseup', mouseUpHandler);
@@ -717,17 +742,27 @@ function mouseMoveHandler(event) {
 function checkBoardZone(target) {
     if (target.classList.contains('transparent-cell')) {
         
-        if (target.getAttribute('location')==='' || target.hasChildNodes()) return false;
+        if (target.getAttribute('location')==='') {
+            if (target.hasChildNodes()) {
+                const child = target.firstChild;
+                if (child.classList.contains('dragging-tile')) {
+                    return true;
+                }
+            }
+            return false;
+        }
         else return true;
     }
     else return false;
 }
 
 function mouseUpHandler(event) {
-    const tile = document.querySelector('.draggingTile');
+    const tile = document.querySelector('.dragging-tile');
 
     if (tile) {
         let dropTarget = event.target;
+
+        if (!tile.hasChildNodes()) return;
 
         const letter = tile.firstChild.textContent; // Only the letter, without any span
         const points = letterPoints.get(letter);  // Get points based on the letter
@@ -757,7 +792,6 @@ function mouseUpHandler(event) {
             console.log('Tile placed successfully');
 
             const cellLocation = dropTarget.getAttribute('location').split('_')[1];
-            console.log(cellLocation);
 
             // Create a new tile and add it to the drop target
             const newTile = createTile(letter, points, tileID, cellLocation);
@@ -765,7 +799,9 @@ function mouseUpHandler(event) {
             dropTarget.appendChild(newTile);  // Place the tile on the board
             
             // Remove the original tile from the scrabble rack
-            parentNode.removeChild(tile);
+            if (parentNode.contains(tile)) parentNode.removeChild(tile);
+
+            newTile.classList.add('placed-tile'); // Add placed-tile class
 
             addSelectedTile(letter, tileID, cellLocation);
             verifyWord(selectedTiles);
@@ -796,7 +832,7 @@ function mouseUpHandler(event) {
             removeSelectedTile(tileID);
         }
 
-        tile.classList.remove('draggingTile'); // Remove draggingTile class
+        tile.classList.remove('dragging-tile'); // Remove dragging-tile class
     }
 
     document.removeEventListener('mousemove', mouseMoveHandler);
@@ -835,16 +871,7 @@ function verifyWord(tiles) {
     tiles.forEach((letter, tileID, location) => {
         console.log(letter, tileID, location);
     }); 
-/*
-    const request = new XMLHttpRequest()
-    request.open("POST", "/verify-word", true);
-    request.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-    request.send(JSON.stringify(tiles));
-    request.onload = () => {
-        const response = JSON.parse(request.responseText)
-        console.log(response)
-    }   
-*/
+
     const tilesJson = JSON.stringify(tiles);
 
     fetch('/verify-word', {
@@ -856,12 +883,11 @@ function verifyWord(tiles) {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('Response from server:', data);
-        // Handle the response data
         if (data.status === 'success') {
             // Update the points box with the calculated points
             if (data.points>0) {
-                document.getElementById('points').textContent = data.points;
+                updateTentativePoints(data.points)
+
                 alert('Word verified successfully!');
                 return true;
             } else {
@@ -882,6 +908,7 @@ function verifyWord(tiles) {
 // User buttons
 
 document.getElementById('revertButton').addEventListener('click', revertTiles);
+document.getElementById('shuffleButton').addEventListener('click', shuffleTiles);
 
 // Add event listeners for the new buttons
 document.getElementById('approveButton').addEventListener('click', () => {
@@ -900,6 +927,11 @@ document.getElementById('skipTurnButton').addEventListener('click', () => {
 });
 
 function getTiles() {
+}
+
+function updateTentativePoints(points) {
+    if (points === null || points === 0) document.getElementById('tentativePoints').textContent = '';
+    else document.getElementById('tentativePoints').textContent = ` (${points})`;
 }
 
 function updateLeaderboard(playersMeta_) {
@@ -939,7 +971,7 @@ function updateLeaderboard(playersMeta_) {
 
         const playerPoint = document.createElement('span');
         playerPoint.style.margin = '10px';
-        playerPoint.textContent = player_.PLAYER_POINT;
+        playerPoint.textContent = player_.PLAYER_POINTS;
         playerContainer.appendChild(playerPoint);
 
         if (player_.PLAYER_STATE === PlayerState.WAITING) {
@@ -955,8 +987,8 @@ function updateLeaderboard(playersMeta_) {
             "
 
             stateIndicator.style.margin = '10px';
-            stateIndicator.style.background = '#3F8E41';
-            stateIndicator.style.color = 'white';
+            stateIndicator.style.background = 'var(--cell-color)';
+            stateIndicator.style.color = 'var(--text-color)';
 
             playerContainer.appendChild(readyIndicator);
         } else if (player_.PLAYER_STATE === PlayerState.WIN) {
@@ -971,6 +1003,9 @@ function updateLeaderboard(playersMeta_) {
 
         if (myPlayer !== null && myPlayer.get_playerID() === player_.PLAYER_ID) {
             playerName.style.fontWeight = 'bold';
+            playerName.style.border = '2px solid white'
+            const myPlayerPoints = document.getElementById('myPlayerPoints');
+            myPlayerPoints.textContent = player_.PLAYER_POINTS;
         }
 
         fragment.appendChild(playerContainer);
@@ -994,24 +1029,37 @@ function updateUserControl(playersMeta_) {
 }
 
 function revertTiles() {
-    selectedTiles.forEach(tile => {
-        const scrabbleRack = document.getElementById('scrabbleRack');
-        const newTile = createTile(tile.letter, letterPoints.get(tile.letter), tile.tileID);
+    const scrabbleRack = document.getElementById('scrabbleRack');
 
-        // Remove the tile from its parent if it has one
-        const parentElement = document.querySelector(`[location="${tile.location}"]`);
-        if (parentElement && parentElement.contains(newTile)) {
-            parentElement.removeChild(newTile);
-        }
+    const placedTiles = document.querySelectorAll('.placed-tile');
+    console.log(placedTiles);
+    placedTiles.forEach(tile => {
+        // Remove the tile from the board
+        tile.parentElement.removeChild(tile);
 
-        scrabbleRack.appendChild(newTile);
+        // Optionally, return the tile to the player's rack
+        scrabbleRack.appendChild(tile);
 
-        const cell = document.querySelector(`[location="${tile.location}"]`);
-        if (cell) {
-            cell.innerHTML = '';  // Clear the cell
-        }
+        // Remove the 'placed-tile' class to reset the tile state
+        tile.classList.remove('placed-tile');
     });
+
     selectedTiles = [];
+}
+
+function shuffleTiles() {
+    const scrabbleRack = document.getElementById('scrabbleRack');
+    const tiles = Array.from(scrabbleRack.children);
+
+    // Shuffle the tiles array
+    for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+    
+    // Clear the scrabbleRack and append the shuffled tiles
+    scrabbleRack.innerHTML = '';
+    tiles.forEach(tile => scrabbleRack.appendChild(tile));
 }
 
 function approveWord(tiles=[]) {
@@ -1030,12 +1078,10 @@ function approveWord(tiles=[]) {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('Response from server:', data);
-        // Handle the response data
         if (data.status === 'success') {
             // Update the points box with the calculated points
             if (data.points>0) {
-                document.getElementById('points').textContent = data.points;
+                document.getElementById('myPlayerPoints').textContent = data.points;
                 alert('Word verified successfully!');
             } else {
                 alert('Word verification failed!');
@@ -1066,6 +1112,37 @@ function updateGame(playersMeta_) {
 
 function updateBoard(board_) {
 
+}
+
+function quitGame() {
+    alert('You are about to quit game. Are you sure?');
+
+    fetch('/approve-word', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: tilesJson
+    })
+    .then(response => {
+        if (response.redirected) {
+            // Handle redirection
+            window.location.href = response.url;
+        } else {
+            return response.json();
+        }
+    })
+    .then(data => {
+        // Handle the response data
+        if (data && data.status !== 'success') {
+            alert('Cannot quit from the game: ' + data.message);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        return false;
+    });
 }
 
 </script>
