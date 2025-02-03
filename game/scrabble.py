@@ -80,13 +80,13 @@ class Game:
     __turn_count: int = 0
 
     def __init__(self, socketio, player_count=2):
+        self.__socketio = socketio
         self.__game_id = generate_unique_id()
         self.__player_count = player_count
         self.__tile_bag = TileBag()
         self.__players.clear()
         self.__player_order.clear()
-        self.__board.clear()
-
+        
         self.__set_state(GameState.WAITING_FOR_PLAYERS)
 
     def get_game_id(self) -> str:
@@ -97,7 +97,7 @@ class Game:
 
     def __set_state(self, state: GameState):
         self.__state = state
-        self.update(self)
+        self.update()
 
     def create_player(self, player_type=PlayerType.HUMAN) -> str:
         if (self.__active_player_count >= self.__player_count):
@@ -211,7 +211,7 @@ class Game:
                 self.__set_state(GameState.PLAYER_ORDER_SELECTION)
         elif self.__state == GameState.PLAYER_ORDER_SELECTION:
             # Check if all players have selected their order
-            if self.__turn_count == len(self.get_player_count()):
+            if self.__turn_count == self.get_player_count():
                 self.__set_state(GameState.GAME_STARTED)
         elif self.__state == GameState.GAME_STARTED:
             # Check if game is over

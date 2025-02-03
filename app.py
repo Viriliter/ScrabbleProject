@@ -35,7 +35,7 @@ def update_lobby(game: Game):
 
 @app.route("/")
 def index() -> Response:
-    return render_template('game.html')
+    return render_template('lobby.html')
 
 @app.route("/create-new-game", methods=["POST"])
 def create_new_game() -> Response:
@@ -175,7 +175,7 @@ def enter_game() -> Response:
         update_lobby(game)
 
         if is_entered:
-            return redirect(url_for('game', game_id=game_id, user_id=player_id))
+            return redirect(url_for('game', game_id=game_id, player_id=player_id))
         else:
             return jsonify({"status": "error", "message": "Player cannot enter to game"}), 400
 
