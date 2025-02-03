@@ -1,2 +1,4 @@
 cert/*
 db/*
+
+*/__pycache__/*
