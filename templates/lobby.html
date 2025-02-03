@@ -15,13 +15,21 @@
             font-style: normal;
         }
 
+        :root {
+            --tile-size: 42px;
+            --icon-size: 36px;
+            --text-color: white;
+            --background-color: #2A6334;  /* Dark green background */
+            --cell-color: #3F8E41;   /* Light green foreground */
+        }
+
         body {
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #2A6334; /* Dark green background */
+            background-color: var(--background-color);
             font-family: 'Eurostile', sans-serif;
         }
         .container {
@@ -39,20 +47,19 @@
             margin: 20px;
             gap: 10px; /* Space between cells */
             display: grid;
-            grid-template-columns: repeat(8, 40px);
-            grid-template-rows: repeat(1, 40px);
+            grid-template-columns: repeat(8, var(--tile-size));
+            grid-template-rows: repeat(1, var(--tile-size));
             width: fit-content;
             height: fit-content;
         }
         .tile {
+            display: flex;
             position: relative;
-            width: 40px;
-            height: 40px;
+            width: var(--tile-size);
+            height: var(--tile-size);
             z-index: 3; /* Behind the tiles board */
-            margin: 0px;
             border-radius: 5px;
             background-color: #c6ae89;
-            display: flex;
             justify-content: center;
             align-items: center;
             font-size: 24px;
@@ -75,7 +82,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: #3F8E41;
+            background-color: var(--cell-color);
             color: white;
             text-align: center;
             align-content: center;
@@ -91,7 +98,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: #3F8E41;
+            background-color: var(--cell-color);
             color: white;
             text-align: center;
             padding: 10px 5px; /* Add padding inside the item */
@@ -100,8 +107,8 @@
             width: 100%; /* Full width of the container */
         }
         .button-lobby{
-            background-color: #2A6334; /* Dark green background */
-            color: white;
+            background-color: var(--background-color);
+            color: var(--text-color);
             text-align: center;
             width: 100%; /* Full width of the container */
             height: 100%; /* Full height of the container */
@@ -125,15 +132,15 @@
             display: grid;
             gap: 10px; /* Space between cells */
             grid-template-columns: repeat(1, 100%);
-            grid-template-rows: repeat(4, 40px);
-            background-color: #3F8E41;
+            grid-template-rows: repeat(4, var(--tile-size));
+            background-color: var(--cell-color);
             width: 100%;
             height: 100%;
         }
         .container-lobby {
-            height: 40px;
-            background-color: #2A6334; /* Dark green background */
-            color: white;
+            height: var(--tile-size);
+            background-color: var(--background-color);
+            color: var(--text-color);
             align-items: center;
             text-align: center;
             display: flex;
@@ -147,8 +154,8 @@
             align-items: center;
         }
         .player-item {
-            background-color: #2A6334; /* Dark green background */
-            color: white;
+            background-color: var(--background-color);
+            color: var(--text-color);
             text-align: center;
         }
         .fixed-width-dropdown {
@@ -173,7 +180,7 @@
                 <div class="tile">L<span class="points">1</span></div>
                 <div class="tile">E<span class="points">1</span></div>
             </div>                                           
-            <h1 id="gameIDHeader" style="color: white; font-size: 15px; visibility: hidden;">Looby ID: <span id="gameIDSpan"> 000001 </span></h1>
+            <h1 id="gameIDHeader" style="color: var(--text-color); font-size: 15px; visibility: hidden;">Looby ID: <span id="gameIDSpan"> 000001 </span></h1>
         </div>
 
         <div class="stacked-container" id="stackedContainer">
@@ -421,8 +428,8 @@ function updateLobby(playersMeta_) {
         if (player_.PLAYER_STATE == PlayerState.READY) {
             const readyIndicator = document.createElement('span');
             readyIndicator.style.margin = '10px';
-            readyIndicator.style.background = '#3F8E41';
-            readyIndicator.style.color = 'white';
+            readyIndicator.style.background = 'var(--cell-color)';
+            readyIndicator.style.color = 'var(--text-color)';
             readyIndicator.textContent = 'READY';
             playerContainer.appendChild(readyIndicator);
         }
