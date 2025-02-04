@@ -51,33 +51,31 @@ class TileBag:
         return self.__remaning_tiles
 
 class Rack:
-    __tile_bag: TileBag = None
-    __rack: List[chr] = []
+    __container: List[chr] = []
 
-    def __init__(self, tile_bag: TileBag):
-        self.__tile_bag = tile_bag
-        self.initialize()
-
-    def add_to_rack(self) -> None:
-        letter = self.__tile_bag.get_random_letter()
-        self.__rack.append(letter)
+    def __init__(self):
+        self.__container.clear()
+        
+    def add_to_rack(self, letter: chr) -> None:
+        self.__container.append(letter)
 
     def remove_from_rack(self, letter: chr) -> None:
-        self.__rack.remove(letter)
+        self.__container.remove(letter)
 
     def get_rack_length(self) -> int:
-        return self.__rack.__len__()
+        return self.__container.__len__()
 
     def get_letters(self) -> List[chr]:
-        return self.__rack.copy()
+        return self.__container.copy()
 
-    def replenish_rack(self) -> None:
-        while self.get_rack_length() < INITIAL_TILE_COUNT and self.__tile_bag.get_remaining_tiles() > 0:
-            self.add_to_rack()
-
-    def initialize(self) -> None:
-        for _ in range(INITIAL_TILE_COUNT):
-            self.add_to_rack()
+    def serialize(self) -> Dict[str, int]:
+        letter_counts = {}
+        for letter in self.__container:
+            if letter in letter_counts:
+                letter_counts[letter] += 1
+            else:
+                letter_counts[letter] = 1
+        return letter_counts
 
 class Dictionary:
     __tiles: Dict[str, int] = {}
@@ -145,3 +143,19 @@ class Board:
 
     def clear(self) -> None:
         self.__cells = [['' for _ in range(self.__col)] for _ in range(self.__row)]
+
+    def serialize(self) -> Dict[Tuple[int, int], chr]:
+        board_state = {}
+        for row in range(self.__row):
+            for col in range(self.__col):
+                if self.__cells[row][col] != '':
+                    board_state[(row, col)] = self.__cells[row][col]
+        return board_state
+
+    @staticmethod
+    def sort_letters(letters: List[Tuple[chr, str]]) -> List[Tuple[chr, str]]:
+        def key_func(item):
+            row, col = item[1][0], int(item[1][1:])
+            return (col, row)  # Prioritize column first, then row
+        
+        return sorted(letters, key=key_func)

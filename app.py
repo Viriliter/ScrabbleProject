@@ -4,6 +4,7 @@ import sys
 import json
 import random
 import string
+import threading
 
 from typing import List, Dict, Tuple
 
@@ -11,11 +12,27 @@ from flask import Flask, render_template, Response, request, url_for, flash, red
 from flask_socketio import SocketIO, emit
 from werkzeug.exceptions import abort
 
-from game import PlayerMeta, PlayerType, PlayerState, Game
+from game import PlayerMeta, PlayerType, PlayerState, GameMeta,  GameState, Game
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "admin"
 socketio = SocketIO(app)
+
+# This container holds all game sessions in the server
+games: List[Game] = []
+
+GAME_CLEAN_INTERVAL = 10  # in seconds
+
+def clean_games():
+    global games
+    for game in games:
+        print(game.get_game_state())
+        if game.get_game_state() == GameState.GAME_OVER:
+            print(f"GameID: {game.get_game_id()} cleaned.")
+            games.remove(game)
+            break
+
+    threading.Timer(GAME_CLEAN_INTERVAL, clean_games).start()  # Run every 10 seconds
 
 def create_game(player_count: int) -> Game:
     game = Game(socketio, player_count)
@@ -33,9 +50,13 @@ def update_lobby(game: Game):
     # Emit the notification to all connected clients
     socketio.emit('update-lobby', {"playersMeta": [player.__dict__ for player in players_meta]})
 
+# Home Page
+
 @app.route("/")
 def index() -> Response:
-    return render_template('lobby.html')
+    return render_template('game.html')
+
+# Lobby POSTS
 
 @app.route("/create-new-game", methods=["POST"])
 def create_new_game() -> Response:
@@ -179,10 +200,23 @@ def enter_game() -> Response:
         else:
             return jsonify({"status": "error", "message": "Player cannot enter to game"}), 400
 
+# Game POSTS
+
 @app.route("/game/<game_id>/<player_id>")
 def game(game_id: str, player_id: str) -> Response:
     # Your logic to render the game page
     return render_template('game.html', game_id=game_id, player_id=player_id)
+
+@app.route("/game/<game_id>/<player_id>/request-order")
+def request_order(game_id: str, player_id: str) -> Response:
+    request_json = request.get_json()
+
+    game = get_game(game_id)
+    result = game.request_play_order(player_id)
+    if result:
+        return jsonify({"status": "success"}), 200
+    else:
+        return jsonify({"status": "success", "message": "Player cannot request play order"}), 400
 
 @app.route("/game/<game_id>/<player_id>/verify-word", methods=["POST"])
 def verify_word(game_id: str, player_id: str) -> Response:
@@ -240,6 +274,8 @@ def submit(game_id: str, player_id: str) -> Response:
     else:
         return jsonify({"status": "error", "message": "Game not found"}), 404
 
+# Other POSTS
+
 @app.route("/settings")
 def settings() -> Response:
     return render_template('settings.html')
@@ -262,8 +298,7 @@ if __name__ == "__main__":
 
     context = ("./cert/---.crt", "./cert/---.key")  # certificate and key files (if needed rename them)
 
-    # This container holds all game sessions in the server
-    games: List[Game] = []
+    #clean_games()  # This function cleans games if it is finished. It is called receursivelly in certain time intervals
 
     if os.path.exists(context[0]) and os.path.exists(context[1]):
         app.run(host="0.0.0.0", debug=True, ssl_context=context)

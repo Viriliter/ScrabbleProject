@@ -47,6 +47,7 @@
             align-items: center;
         }
         .bottom-container {
+            position: relative;
             display: flex;
             align-items: center;
             margin-top: 20px;
@@ -456,20 +457,24 @@
             </div>
             
             <div class="bottom-container">
-                <div class="rack-container">
-                    <button class="circular-button" id="shuffleButton" title="Shuffle">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M560-160v-80h104L537-367l57-57 126 126v-102h80v240H560Zm-344 0-56-56 504-504H560v-80h240v240h-80v-104L216-160Zm151-377L160-744l56-56 207 207-56 56Z"/></svg>
-                    </button>
-                    <div class="rack" id="scrabbleRack">
+                <div id="rackDiv" style="display: flex; visibility: collapse;">
+                    <div class="rack-container">
+                        <button class="circular-button" id="shuffleButton" title="Shuffle">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M560-160v-80h104L537-367l57-57 126 126v-102h80v240H560Zm-344 0-56-56 504-504H560v-80h240v240h-80v-104L216-160Zm151-377L160-744l56-56 207 207-56 56Z"/></svg>
+                        </button>
+                        <div class="rack" id="scrabbleRack"></div>
+                        <button class="circular-button" id="revertButton" title="Revert">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m 600,-200 -56,-57 143,-143 H 300 q -75,0 -127.5,-52.5 Q 120,-505 120,-580 120,-655 172.5,-707.5 225,-760 300,-760 h 20 v 80 h -20 q -42,0 -71,29 -29,29 -29,71 0,42 29,71 29,29 71,29 h 387 l -143,-144 56,-56 240,240 z"/></svg>
+                        </button>
                     </div>
-                    <button class="circular-button" id="revertButton" title="Revert">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m 600,-200 -56,-57 143,-143 H 300 q -75,0 -127.5,-52.5 Q 120,-505 120,-580 120,-655 172.5,-707.5 225,-760 300,-760 h 20 v 80 h -20 q -42,0 -71,29 -29,29 -29,71 0,42 29,71 29,29 71,29 h 387 l -143,-144 56,-56 240,240 z"/></svg>
-                    </button>
+        
+                    <div class="container" style="padding: 10px; margin-left: 50px; margin-top: 10px; margin-bottom: 10px; row-gap: 10px;">
+                        <button class="rect-button" id="skipTurnButton" title="Skip Turn">Skip Turn</button>
+                        <button class="rect-button" id="approveButton"  title="Approve">Approve <span id="tentativePoints"></span></button>
+                    </div>
                 </div>
-    
-                <div class="container" style="padding: 10px; margin-left: 50px; margin-top: 10px; margin-bottom: 10px; row-gap: 10px;">
-                    <button class="rect-button" id="skipTurnButton" title="Skip Turn">Skip Turn</button>
-                    <button class="rect-button" style="visibility: visible;" id="approveButton"  title="Approve">Approve <span id="tentativePoints"></span></button>
+                <div style="display: flex; position: absolute; z-index: 10; width: 100%; height: 100%; align-items: center; justify-content: space-around;">
+                    <button class="rect-button" id="requestOrderButton" title="Get Tile">Get Tile</button>
                 </div>
             </div>
         </div>
@@ -578,12 +583,20 @@ let selectedTiles = [];
 let tileCounter = 0; // Initialize a counter for the tiles
 
 socket.on('update-game', function(data) {
+    updateGame(data.game);
+});
+
+socket.on('update-players', function(data) {
     playersMeta = data.playersMeta;
-    updateGame(data.playersMeta);
+    updatePlayers(data.playersMeta);
 });
 
 socket.on('update-board', function(data) {
     updateBoard(data.board);
+});
+
+socket.on('update-racks', function(data) {
+    updateRack(data.racks);
 });
 
 const letterCounts = new Map([
@@ -920,11 +933,18 @@ document.getElementById('approveButton').addEventListener('click', () => {
 });
 
 document.getElementById('skipTurnButton').addEventListener('click', () => {
+    requestOrder();
+    console.log('Request order button clicked');
+    // Add your skip turn functionality here
+});
+
+document.getElementById('requestOrderButton').addEventListener('click', () => {
     revertTiles();
     approveWord();
     console.log('Skip Turn button clicked');
     // Add your skip turn functionality here
 });
+
 
 function getTiles() {
 }
@@ -1095,12 +1115,37 @@ function approveWord(tiles=[]) {
     });
 }
 
+function requestOrder() {
+    fetch('/request-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({'gameID': myGame.getGameID(), 'playerID': myPlayer.getPlayerID()})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+
+        } else {
+            alert('Unknown error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
 function requestLetter() {
 
 }
 
-function updateGame(playersMeta_) {
-    console.log('game updating...', playersMeta_);
+function updateGame(game) {
+    console.log('game updating...', game);
+}
+
+function updatePlayers(playersMeta_) {
+    console.log('players updating...', playersMeta_);
 
     if (!playersMeta_ || playersMeta_.length === 0) {
         return;
@@ -1111,6 +1156,12 @@ function updateGame(playersMeta_) {
 }
 
 function updateBoard(board_) {
+    console.log('boards updating...', playersMeta_);
+
+}
+
+function updateRacks(racks_) {
+    console.log('racks updating...', racks_);
 
 }
 

@@ -2,11 +2,13 @@
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
+# Cell Location
 @dataclass(frozen=True)
 class CL:
     row: int
     col: int
 
+# Cell Type
 class CT:
     ORDINARY = 0
     DOUBLE_LETTER = 1
@@ -19,7 +21,7 @@ BOARD_ROW = 15
 BOARD_COL = 15
 
 # (CellLocation, CellType)
-SPECIAL_CELLS: Dict[CL, CL] = {
+SPECIAL_CELLS: Dict[CL, CT] = {
     CL(0,0),    CT.TRIPLE_WORD,
     CL(0,7),    CT.TRIPLE_WORD,
     CL(0,14),   CT.TRIPLE_WORD,
@@ -117,7 +119,7 @@ ENGLISH_TILES: Dict[str, Tuple[int, int]] = {
 # Declare initial tile count for each player
 INITIAL_TILE_COUNT: int = 7
 
-AI_PLAYER_NAMES = ["William", "Olivia", "Benjamin", "Charlotte"]
+AI_PLAYER_NAMES = ["Balzac", "Orwell", "Shelley", "Agatha"]
 
 @dataclass(frozen=True)
 class LETTER:
