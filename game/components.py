@@ -4,16 +4,18 @@ import random
 from .globals import *
 
 class TileBag:
-    __reference_tiles: Dict[str, Tuple[int, int]] = None
-    __tiles: Dict[str, Tuple[int, int]] = {}
+    __reference_tiles: Dict[chr, Tuple[int, int]] = None
+    __tiles: Dict[chr, Tuple[int, int]] = {}
     __remaning_tiles: int = 0
+    __picked_letters: List[chr] = []
 
     def __init__(self):
         self.__reference_tiles = {}
         self.__tiles = {}
         self.__remaning_tiles = 0
+        self.__picked_letters.clear()
 
-    def load(self, tiles: Dict[str, int]) -> None:
+    def load(self, tiles: Dict[chr, int]) -> None:
         self.__reference_tiles = tiles
         for letter, (count, points) in tiles.items():
             if letter in self.__tiles:
@@ -49,6 +51,15 @@ class TileBag:
 
     def get_remaining_tiles(self) -> int:
         return self.__remaning_tiles
+
+    def pick_letter_for_order(self) -> chr:
+        available_letters = set(self.__tiles.keys()) - set(self.__picked_letters)
+        if not available_letters:
+            raise ValueError("No available letters left to pick.")
+    
+        letter = random.choice(list(available_letters))
+        self.__picked_letters.append(letter)
+        return letter
 
 class Rack:
     __container: List[chr] = []

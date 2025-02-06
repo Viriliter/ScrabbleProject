@@ -54,7 +54,7 @@ def update_lobby(game: Game):
 
 @app.route("/")
 def index() -> Response:
-    return render_template('game.html')
+    return render_template('lobby.html')
 
 # Lobby POSTS
 
@@ -204,19 +204,55 @@ def enter_game() -> Response:
 
 @app.route("/game/<game_id>/<player_id>")
 def game(game_id: str, player_id: str) -> Response:
-    # Your logic to render the game page
     return render_template('game.html', game_id=game_id, player_id=player_id)
 
-@app.route("/game/<game_id>/<player_id>/request-order")
-def request_order(game_id: str, player_id: str) -> Response:
-    request_json = request.get_json()
-
+@app.route("/game/<game_id>/<player_id>/get-player-name", methods=["POST"])
+def get_player_name(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
-    result = game.request_play_order(player_id)
-    if result:
+    if game is None:
+        return jsonify({"status": "error", "message": "Game could not found"}), 404
+
+    player = game.found_player(player_id)
+    if player is None:
+        return jsonify({"status": "error", "message": "Player could not be found"}), 404
+    print(f"Stored player name {player.get_player_name()} for id of {player_id}")
+    return jsonify({"status": "success", "playerName": player.get_player_name()}), 200
+
+@app.route("/game/<game_id>/<player_id>/request-update", methods=["POST"])
+def request_update(game_id: str, player_id: str) -> Response:
+    game = get_game(game_id)
+    if game is not None:
+        game.update_clients()
         return jsonify({"status": "success"}), 200
+    return jsonify({"status": "error", "message": "Game could not found"}), 404
+
+@app.route("/game/<game_id>/<player_id>/request-order", methods=["POST"])
+def request_order(game_id: str, player_id: str) -> Response:
+    game = get_game(game_id)
+    if game is None:
+        return jsonify({"status": "error", "message": "Game could not found"}), 404
+
+    letter = game.request_play_order(player_id)
+    if letter is not None:
+        return jsonify({"status": "success", "letter": letter}), 200
     else:
-        return jsonify({"status": "success", "message": "Player cannot request play order"}), 400
+        return jsonify({"status": "error", "message": "Player cannot request play order"}), 400
+
+@app.route("/game/<game_id>/<player_id>/request-rack", methods=["POST"])
+def request_rack(game_id: str, player_id: str) -> Response:
+    game = get_game(game_id)
+    if game is None:
+        return jsonify({"status": "error", "message": "Game could not found"}), 404
+
+    player = game.found_player(player_id)
+    if player is None:
+        return jsonify({"status": "error", "message": "Player could not be found"}), 404
+
+    rack = player.get_serialized_rack()
+    if rack is not None:
+        return jsonify({"status": "success", "rack": rack}), 200
+    else:
+        return jsonify({"status": "error", "message": "Player cannot request its rack"}), 400
 
 @app.route("/game/<game_id>/<player_id>/verify-word", methods=["POST"])
 def verify_word(game_id: str, player_id: str) -> Response:

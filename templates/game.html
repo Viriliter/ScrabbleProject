@@ -31,7 +31,9 @@
         }
 
         /* Classes */
-
+        .blocked {
+            pointer-events: none; /* Disables clicks */
+        }
         .top-container {
             display: flex;
             align-items: center;
@@ -277,10 +279,10 @@
         #shuffleButton:hover {
             background-color: #b69f42; /* Slightly darker yellow on hover */
         }
-        #approveButton {
+        #submitButton {
             background-color: green; /* Light blue background */
         }
-        #approveButton:hover {
+        #submitButton:hover {
             background-color: lightgreen; /* Light blue background */
         }
         #skipTurnButton {
@@ -470,29 +472,27 @@
         
                     <div class="container" style="padding: 10px; margin-left: 50px; margin-top: 10px; margin-bottom: 10px; row-gap: 10px;">
                         <button class="rect-button" id="skipTurnButton" title="Skip Turn">Skip Turn</button>
-                        <button class="rect-button" id="approveButton"  title="Approve">Approve <span id="tentativePoints"></span></button>
+                        <button class="rect-button" id="submitButton"  title="Submit">Submit <span id="tentativePoints"></span></button>
                     </div>
                 </div>
-                <div style="display: flex; position: absolute; z-index: 10; width: 100%; height: 100%; align-items: center; justify-content: space-around;">
+                <div id="playerOrderDiv" style="display: flex; position: absolute; z-index: 10; width: 100%; height: 100%; align-items: center; justify-content: space-around;">
                     <button class="rect-button" id="requestOrderButton" title="Get Tile">Get Tile</button>
+                </div>
+                <div id="orderTileDiv" style="display: flex;  visibility: collapse; position: absolute; z-index: 11; width: 100%; height: 100%; align-items: center; justify-content: space-around;">
                 </div>
             </div>
         </div>
         <div class="leader-board" style="margin-top: 80px;">
             <h1 style="color: var(--text-color); text-align: center;">LEADERBOARD</h1>
-            <div class="leader-board-table" id="tableLeaderboard">
-                <div class="player-item">Player 1 <span> 43</span> </div>
-                <div class="player-item">Player 2 <span> 70</span> </div>
-                <div class="player-item">Player 3 <span> 25</span> </div>
-                <div class="player-item">Player 4 <span> 69</span> </div>
-            </div>
+            <div class="leader-board-table" id="tableLeaderboard"></div>
         </div>
     </div>
 </body>
 
 <script>
 
-const socket = io.connect('https://127.0.0.1:5000');
+//const socket = io.connect('https://127.0.0.1:5000');
+const socket = io.connect(`${window.location.origin}`);
 
 const letterPoints = new Map([
     ['A', 1], ['B', 3], ['C', 3], ['D', 2], ['E', 1],
@@ -504,18 +504,28 @@ const letterPoints = new Map([
 ]);
 
 const PlayerState = {
-    UNDEFINED:  0,   // The player has not been initialized yet
-    NOT_READY:  1,   // The player has entered lobby screen but not clicked the ready button yet
-    READY:      2,   // After player has clicked the ready button on lobby screen
-    WAITING:    3,   // Player is waiting for its next turn to play
-    PLAYING:    4,   // Player is playing its turn
-    WON:        5,   // Player has won the game
-    LOST:       6,   // Player has lost the game
+    UNDEFINED:      0,   // The player has not been initialized yet
+    NOT_READY:      1,   // The player has entered lobby screen but not clicked the ready button yet
+    READY:          2,   // After player has clicked the ready button on lobby screen
+    WAITING:        3,   // Player is waiting for its next turn to play
+    PLAYING:        4,   // Player is playing its turn
+    WON:            5,   // Player has won the game
+    LOST:           6,   // Player has lost the game
+    WAITING_ORDER:  7    // Player is waiting to be ordered 
 };
+
+const GameState = {
+    UNDEFINED:               0,  // Initial state
+    WAITING_FOR_PLAYERS:     1,  // Waiting for players to join the game
+    PLAYER_ORDER_SELECTION:  2,  // Players are selecting the order of play
+    GAME_STARTED:            3,  // Game has started
+    GAME_OVER:               4  // Game is over
+}
 
 class Game {
     gameID = '';
     players = [];
+    gameState = GameState.UNDEFINED;
 
     constructor(gameID) {
         this.gameID = gameID;
@@ -526,6 +536,14 @@ class Game {
         return this.gameID;
     }
 
+    getGameState() {
+        return this.gameState;
+    }
+
+    setGameState(state) {
+        this.gameState = state;
+    }
+
     addPlayers(player) {
         this.players.push(player);
     }
@@ -534,8 +552,11 @@ class Game {
 class Player {
     playerID = -1;
     playerName = '';
+    playerType = 0;
     isAdmin = false;
     playerState = PlayerState.UNDEFINED;
+    orderLetter = null;
+    points = 0;
 
     constructor(playerID, playerName) {
         this.playerID = playerID;
@@ -558,6 +579,14 @@ class Player {
         this.playerName = playerName;
     }
 
+    getPlayerType() {
+        return this.playerType;
+    }
+
+    setPlayerType(playerType) {
+        this.playerType = playerType;
+    }
+
     getPlayerState() {
         return this.playerState;
     }
@@ -573,31 +602,85 @@ class Player {
     isAdmin() {
         return this.isAdmin;
     }
+
+    getOrderLetter() {
+        return this.orderLetter;
+    }
+
+    setOrderLetter(letter) {
+        this.orderLetter = letter;
+    }
+
+    getPoints() {
+        return this.points;
+    }
+
+    setPoints(points) {
+        this.points = points;
+    }
+
 }
 
-let myGame = null
-let myPlayer = null
+/** @type {Game} */
+let myGame = null;
+/** @type {Player} */
+let myPlayer = null;
+/** @type {number} */
+let currentPlayerID = null;
+/** @type {Object<string, any>} */
 let playersMeta = null;
 
 let selectedTiles = [];
 let tileCounter = 0; // Initialize a counter for the tiles
 
 socket.on('update-game', function(data) {
-    updateGame(data.game);
+    console.log('update-game::::');
+    updateGame(data.gameMeta);
 });
 
 socket.on('update-players', function(data) {
+    console.log('update-players::::');
     playersMeta = data.playersMeta;
     updatePlayers(data.playersMeta);
 });
 
 socket.on('update-board', function(data) {
+    console.log('update-board::::');
     updateBoard(data.board);
 });
 
-socket.on('update-racks', function(data) {
-    updateRack(data.racks);
+socket.on('update-rack', function(data) {
+    console.log('update-rack::::');
+    //updateMyRack(data.racks);
 });
+
+function getUrlParams() {
+    const path = window.location.pathname;
+    const pathParts = path.split('/');
+    return {
+        game_id: pathParts[2],
+        player_id: pathParts[3]
+    };
+}
+
+window.onload = function() {
+    const urlParams = getUrlParams();
+    const gameID = urlParams.game_id;
+    const playerID = urlParams.player_id;
+
+    console.log(`Game ID: ${gameID}`);
+    console.log(`Player ID: ${playerID}`);
+
+    // Initialize game and player objects
+    myGame = new Game(gameID);
+
+    // Following function also creates myPlayer
+    fetchPlayerName(playerID);
+
+    // This will update game window
+    // Need to put some delay since socket connections are not properly handled during page load
+    setTimeout(requestUpdate, 500);  // 500ms
+};
 
 const letterCounts = new Map([
     ['A', 9], ['B', 2], ['C', 2], ['D', 4], ['E', 12],
@@ -609,6 +692,7 @@ const letterCounts = new Map([
 ]);
 
 // For debug purposes
+/*
 {
     let totalTiles = 0;
     letterCounts.forEach((count, letter) => {
@@ -625,6 +709,7 @@ const letterCounts = new Map([
         scrabbleRack.appendChild(tile);
     });
 }
+*/
 
 // Create the tile element
 function createTile(letter, points, id=-1, location = '') {
@@ -646,12 +731,6 @@ function createTile(letter, points, id=-1, location = '') {
     pointsSpan.textContent = points;
     tile.appendChild(pointsSpan);
 
-    //tile.draggable = true;
-
-    // Store the letter during drag
-    //tile.addEventListener('dragstart', dragStart);
-    //tile.addEventListener('dragend', dragEnd);
-
     tile.addEventListener('mousedown', mouseDownHandler);
     tile.addEventListener('click', clickHandler);
 
@@ -659,28 +738,7 @@ function createTile(letter, points, id=-1, location = '') {
 }
 
 // Drag and Drop functions
-
-function dragStart(event) {
-    const tile = event.target;
-    // Store only the letter (content) as the drag data
-    const letter = event.target.firstChild.textContent; // Only the letter, without any span
-    const parentElement = event.target.parentNode;
-
-    tile.classList.add('dragging'); // Add dragging class
-
-    event.dataTransfer.setData('text/plain', letter); // Only the letter
-    event.dataTransfer.setData('parentElement', parentElement.outerHTML);  // Store the entire tile's HTML
-    event.dataTransfer.effectAllowed = 'move';
-
-    //event.dataTransfer.setDragImage(event.target, 20, 20); // Adjust offsets for better positioning
-}
-
-function dragEnd(event) {
-    const tile = event.target;
-    // Restore the tile's visibility after the drag operation
-    tile.classList.remove('dragging'); // Remove dragging class
-}
-
+/*
 function dragOver(event) {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -725,6 +783,7 @@ function drop(event) {
         scrabbleRack.appendChild(tile);
     }
 }
+*/
 
 // Mouse event handlers
 
@@ -859,11 +918,11 @@ function clickHandler(event) {
 }
 
 // Add event listeners to board cells
-const boardCells = document.querySelectorAll('.transparent-cell');
-boardCells.forEach(cell => {
-    cell.addEventListener('dragover', dragOver);
-    cell.addEventListener('drop', drop);
-});
+//const boardCells = document.querySelectorAll('.transparent-cell');
+//boardCells.forEach(cell => {
+//    cell.addEventListener('dragover', dragOver);
+//    cell.addEventListener('drop', drop);
+//});
 
 function addSelectedTile(letter, tileID, location) {
     const existingTile = selectedTiles.find(t => t.tileID === tileID);
@@ -887,7 +946,7 @@ function verifyWord(tiles) {
 
     const tilesJson = JSON.stringify(tiles);
 
-    fetch('/verify-word', {
+    fetch(`${window.location}/verify-word`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -918,43 +977,263 @@ function verifyWord(tiles) {
     });
 }
 
+function fetchPlayerName(playerID) {
+    fetch(`${window.location}/get-player-name`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log(data);
+            console.log(`Player Name: ${data.playerName}`);
+            if (data.playerName !== null) {
+                myPlayer = new Player(playerID, data.playerName);
+            }
+        } else {
+            alert('Unknown error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
 // User buttons
 
+document.getElementById('returnLobbyButton').addEventListener('click', quitGame);
+document.getElementById('requestOrderButton').addEventListener('click', requestOrder);
 document.getElementById('revertButton').addEventListener('click', revertTiles);
 document.getElementById('shuffleButton').addEventListener('click', shuffleTiles);
+document.getElementById('skipTurnButton').addEventListener('click', skipTurn);
 
-// Add event listeners for the new buttons
-document.getElementById('approveButton').addEventListener('click', () => {
-    if (verifyWord(selectedTiles)) {
-        approve(selectedTiles);
-    }
-    console.log('Approve button clicked');
-    // Add your approve functionality here
+document.getElementById('submitButton').addEventListener('click', () => {
+    submitWord(selectedTiles);
 });
 
-document.getElementById('skipTurnButton').addEventListener('click', () => {
-    requestOrder();
-    console.log('Request order button clicked');
-    // Add your skip turn functionality here
-});
+function requestUpdate() {
+    console.log('request update...');
+    fetch(`${window.location}/request-update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    })
+    .then(response => response.json())
+    .then(data => {})
+    .catch(error => {
+        console.error('Error:', error);
+    });
 
-document.getElementById('requestOrderButton').addEventListener('click', () => {
-    revertTiles();
-    approveWord();
-    console.log('Skip Turn button clicked');
-    // Add your skip turn functionality here
-});
-
-
-function getTiles() {
 }
+
+function quitGame() {
+    alert('You are about to quit game. Are you sure?');
+
+    fetch(`${window.location}/quit-game`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({'playerID': myPlayer.getPlayerID()})
+    })
+    .then(response => {
+        if (response.redirected) {
+            // Handle redirection
+            window.location.href = response.url;
+        } else {
+            return response.json();
+        }
+    })
+    .then(data => {
+        // Handle the response data
+        if (data && data.status !== 'success') {
+            alert('Cannot quit from the game: ' + data.message);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        return false;
+    });
+}
+
+function requestOrder() {
+    console.log('request order...');
+    fetch(`${window.location}/request-order`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            if (myPlayer !== null) {
+                myPlayer.setOrderLetter(data.letter);
+            }
+        } else {
+            alert('Unknown error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function requestRack() {
+    console.log('request rack...');
+    fetch(`${window.location}/request-rack`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            if (myPlayer !== null) {
+                updateMyRack(data.rack);
+            }
+        } else {
+            alert('Unknown error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function revertTiles() {
+    const scrabbleRack = document.getElementById('scrabbleRack');
+
+    const placedTiles = document.querySelectorAll('.placed-tile');
+    console.log(placedTiles);
+    placedTiles.forEach(tile => {
+        // Remove the tile from the board
+        tile.parentElement.removeChild(tile);
+
+        // Optionally, return the tile to the player's rack
+        scrabbleRack.appendChild(tile);
+
+        // Remove the 'placed-tile' class to reset the tile state
+        tile.classList.remove('placed-tile');
+    });
+
+    selectedTiles = [];
+}
+
+function shuffleTiles() {
+    const scrabbleRack = document.getElementById('scrabbleRack');
+    const tiles = Array.from(scrabbleRack.children);
+
+    // Shuffle the tiles array
+    for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+    
+    // Clear the scrabbleRack and append the shuffled tiles
+    scrabbleRack.innerHTML = '';
+    tiles.forEach(tile => scrabbleRack.appendChild(tile));
+}
+
+function skipTurn() {
+    fetch(`${window.location}/skip-turn`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({'gameID': myGame.getGameID(), 'playerID': myPlayer.getPlayerID()})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+
+        } else {
+            alert('Unknown error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function submitWord(tiles=[]) {
+    if (myPlayer === null) return;
+
+    if (myPlayer.getPlayerState() !== PlayerState.PLAYING) return;
+
+    if (!verifyWord(selectedTiles)) return;
+    
+    const tilesJson = JSON.stringify(tiles);
+
+    fetch(`${window.location}/approve-word`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: tilesJson
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update the points box with the calculated points
+            if (data.points>0) {
+                document.getElementById('myPlayerPoints').textContent = data.points;
+                alert('Word verified successfully!');
+            } else {
+                alert('Word verification failed!');
+            }
+        } else {
+            alert('Unknown error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function swapLetter() {
+    fetch(`${window.location}/swap-letter`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({'gameID': myGame.getGameID(), 'playerID': myPlayer.getPlayerID()})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+
+        } else {
+            alert('Unknown error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+// Frontend updates
 
 function updateTentativePoints(points) {
     if (points === null || points === 0) document.getElementById('tentativePoints').textContent = '';
     else document.getElementById('tentativePoints').textContent = ` (${points})`;
 }
 
+function updateCurrentPlayerID(playersMeta_) {
+    playersMeta_.forEach((player_, index) => {
+        if (player_.PLAYER_STATE === PlayerState.PLAYING) {
+            currentPlayerID = player_.PLAYER_ID;
+        }
+    });
+}
+
 function updateLeaderboard(playersMeta_) {
+    console.log('leaderboard updating...', playersMeta_);
     if (!playersMeta_ || playersMeta_.length === 0) {
         return;
     }
@@ -997,7 +1276,7 @@ function updateLeaderboard(playersMeta_) {
         if (player_.PLAYER_STATE === PlayerState.WAITING) {
             const stateIndicator = document.createElement('span');
 
-            playerContainer.appendChild(readyIndicator);
+            playerContainer.appendChild(stateIndicator);
         } else if (player_.PLAYER_STATE === PlayerState.PLAYING) {
             const stateIndicator = document.createElement('span');
             stateIndicator.innerHTML = " \
@@ -1010,7 +1289,7 @@ function updateLeaderboard(playersMeta_) {
             stateIndicator.style.background = 'var(--cell-color)';
             stateIndicator.style.color = 'var(--text-color)';
 
-            playerContainer.appendChild(readyIndicator);
+            playerContainer.appendChild(stateIndicator);
         } else if (player_.PLAYER_STATE === PlayerState.WIN) {
 
             
@@ -1021,11 +1300,11 @@ function updateLeaderboard(playersMeta_) {
 
         }
 
-        if (myPlayer !== null && myPlayer.get_playerID() === player_.PLAYER_ID) {
+        if (myPlayer !== null && myPlayer.getPlayerID() === player_.PLAYER_ID) {
             playerName.style.fontWeight = 'bold';
-            playerName.style.border = '2px solid white'
+            playerContainer.style.border = '2px solid white'
             const myPlayerPoints = document.getElementById('myPlayerPoints');
-            myPlayerPoints.textContent = player_.PLAYER_POINTS;
+            myPlayerPoints.textContent = `${player_.PLAYER_POINTS}`;
         }
 
         fragment.appendChild(playerContainer);
@@ -1034,114 +1313,96 @@ function updateLeaderboard(playersMeta_) {
     tableLeaderboard.appendChild(fragment); // Batch update for performance
 }
 
-function updateUserControl(playersMeta_) {
+function updateMyPlayer(playersMeta_) {
     if (!playersMeta_ || playersMeta_.length === 0) {
         return;
     }
 
     playersMeta_.forEach((player_, index) => {
-        if (myPlayer !== null && myPlayer.get_playerID() === player_.PLAYER_ID) {
+        if (myPlayer !== null && myPlayer.getPlayerID() === player_.PLAYER_ID) {
+            
+            requestRack();
+            myPlayer.setPlayerState(player_.PLAYER_STATE)
+            myPlayer.setPoints(player_.PLAYER_POINTS)
+
+            // Update player control areas according to its state
+            const returnLobbyButton = document.getElementById('returnLobbyButton');
+            const requestOrderButton = document.getElementById('requestOrderButton');
+            const revertButton = document.getElementById('revertButton');
+            const shuffleButton = document.getElementById('shuffleButton');
             const skipTurnButton = document.getElementById('skipTurnButton');
-            skipTurnButton.setAttribute('')
-        }
 
-    });
-}
+            const scrabbleRack = document.getElementById('scrabbleRack');
 
-function revertTiles() {
-    const scrabbleRack = document.getElementById('scrabbleRack');
-
-    const placedTiles = document.querySelectorAll('.placed-tile');
-    console.log(placedTiles);
-    placedTiles.forEach(tile => {
-        // Remove the tile from the board
-        tile.parentElement.removeChild(tile);
-
-        // Optionally, return the tile to the player's rack
-        scrabbleRack.appendChild(tile);
-
-        // Remove the 'placed-tile' class to reset the tile state
-        tile.classList.remove('placed-tile');
-    });
-
-    selectedTiles = [];
-}
-
-function shuffleTiles() {
-    const scrabbleRack = document.getElementById('scrabbleRack');
-    const tiles = Array.from(scrabbleRack.children);
-
-    // Shuffle the tiles array
-    for (let i = tiles.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
-    }
-    
-    // Clear the scrabbleRack and append the shuffled tiles
-    scrabbleRack.innerHTML = '';
-    tiles.forEach(tile => scrabbleRack.appendChild(tile));
-}
-
-function approveWord(tiles=[]) {
-    if (myPlayer === null) return;
-
-    if (myPlayer.getPlayerState() !== PlayerState.PLAYING) return;
-
-    const tilesJson = JSON.stringify(tiles);
-
-    fetch('/approve-word', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: tilesJson
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Update the points box with the calculated points
-            if (data.points>0) {
-                document.getElementById('myPlayerPoints').textContent = data.points;
-                alert('Word verified successfully!');
+            if (myPlayer.getPlayerState() != PlayerState.PLAYING) {
+                requestOrderButton.classList.add('blocked');
+                revertButton.classList.add('blocked');
+                shuffleButton.classList.add('blocked');
+                skipTurnButton.classList.add('blocked');
+                scrabbleRack.classList.add('blocked');
             } else {
-                alert('Word verification failed!');
+                requestOrderButton.classList.remove('blocked');
+                revertButton.classList.remove('blocked');
+                shuffleButton.classList.remove('blocked');
+                skipTurnButton.classList.remove('blocked');
+                scrabbleRack.classList.remove('blocked');
             }
-        } else {
-            alert('Unknown error: ' + data.message);
+
+            if (myPlayer.getPlayerState() == PlayerState.WAITING_ORDER) {
+                requestOrderButton.classList.remove('blocked');
+            }
+
+            // Set points box
+            const myPlayerPoints = document.getElementById('myPlayerPoints');
+            myPlayerPoints.textContent = `${myPlayer.getPoints()}`;
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
     });
 }
 
-function requestOrder() {
-    fetch('/request-order', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({'gameID': myGame.getGameID(), 'playerID': myPlayer.getPlayerID()})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
+function updateGame(gameMeta) {
+    console.log('game updating...', myGame, gameMeta)
+    if (myGame === null || gameMeta == null) return;
+    myGame.setGameState(gameMeta.GAME_STATE);
 
-        } else {
-            alert('Unknown error: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-}
+    const playerOrderDiv = document.getElementById('playerOrderDiv');
+    const rackDiv = document.getElementById('rackDiv');
+    const orderTileDiv = document.getElementById('orderTileDiv');
+    
+    switch (myGame.getGameState()) {
+        case (GameState.WAITING_FOR_PLAYERS):
+            console.log('GameState.WAITING_FOR_PLAYERS:::');
+            playerOrderDiv.style.visibility = 'collapse';
+            rackDiv.style.visibility = 'collapse';
+            orderTileDiv.style.visibility = 'collapse';
+            break;
+        case (GameState.PLAYER_ORDER_SELECTION):
+            console.log('GameState.PLAYER_ORDER_SELECTION:::');
+            playerOrderDiv.style.visibility = 'visible';
+            rackDiv.style.visibility = 'collapse';
+            orderTileDiv.style.visibility = 'collapse';
 
-function requestLetter() {
-
-}
-
-function updateGame(game) {
-    console.log('game updating...', game);
+            if (myPlayer !== null && myPlayer.getOrderLetter() != null) {
+                console.log('GameState.PLAYER_ORDER_SELECTION:::OrderLetterFound');
+                const tile = createTile(letter);
+                orderTileDiv.appendChild(adminIndicator);
+                orderTileDiv.style.visibility = 'visible';
+            } //TODO Add else logic here
+            break;
+        case (GameState.GAME_STARTED):
+            console.log('GameState.GAME_STARTED:::');
+            playerOrderDiv.style.visibility = 'collapse';
+            rackDiv.style.visibility = 'visible';
+            orderTileDiv.style.visibility = 'collapse';
+            break;
+        case (GameState.GAME_OVER):
+            console.log('GameState.GAME_OVER:::');
+            playerOrderDiv.style.visibility = 'collapse';
+            rackDiv.style.visibility = 'collapse';
+            orderTileDiv.style.visibility = 'collapse';
+            break;
+        default:
+            break;
+    }
 }
 
 function updatePlayers(playersMeta_) {
@@ -1152,47 +1413,30 @@ function updatePlayers(playersMeta_) {
     }
 
     updateLeaderboard(playersMeta_);
-    updateUserControl(playersMeta_);
+    updateMyPlayer(playersMeta_);
+    updateCurrentPlayerID(playersMeta_);
 }
 
 function updateBoard(board_) {
-    console.log('boards updating...', playersMeta_);
+    console.log('boards updating...', board_);
 
 }
 
-function updateRacks(racks_) {
+function updateMyRack(racks_) {
     console.log('racks updating...', racks_);
+    const scrabbleRack = document.getElementById('scrabbleRack');
 
-}
+    // Clear the scrabbleRack 
+    scrabbleRack.innerHTML = '';
+    
+    // Empty rack check
+    if (!racks_ || Object.keys(racks_).length === 0) return;
 
-function quitGame() {
-    alert('You are about to quit game. Are you sure?');
-
-    fetch('/approve-word', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: tilesJson
-    })
-    .then(response => {
-        if (response.redirected) {
-            // Handle redirection
-            window.location.href = response.url;
-        } else {
-            return response.json();
+    racks_.forEach((letter, count) => {
+        for (let i = 0; i < count; i++) {
+            let tile = createTile(letter);
+            scrabbleRack.appendChild(tile);
         }
-    })
-    .then(data => {
-        // Handle the response data
-        if (data && data.status !== 'success') {
-            alert('Cannot quit from the game: ' + data.message);
-            return false;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        return false;
     });
 }
 

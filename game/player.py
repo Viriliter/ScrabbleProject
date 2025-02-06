@@ -37,14 +37,14 @@ class PlayerMeta:
     PLAYER_POINTS: int
 
 class Player:
-    __player_id: str = ''
+    __player_id: str = ""
     __player_name: str = ""
     __player_type: PlayerType = PlayerType.UNDEFINED
     __player_state: PlayerState = PlayerState.UNDEFINED
     __player_privileges: PlayerPrivileges = PlayerPrivileges.UNDEFINED
     __points: int = 0
     __skip_count: int = 0
-    __play_order: int = -1
+    __play_order: int = 100  # Set something large  
     __rack: Rack = None
     __board: Board = None
 
