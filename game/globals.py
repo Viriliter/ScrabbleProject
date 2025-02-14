@@ -1,4 +1,3 @@
-
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
@@ -118,6 +117,8 @@ ENGLISH_TILES: Dict[str, Tuple[int, int]] = {
 
 # Declare initial tile count for each player
 INITIAL_TILE_COUNT: int = 7
+
+MIN_PLAYER_COUNT: int = 2
 
 AI_PLAYER_NAMES = ["Balzac", "Orwell", "Shelley", "Agatha"]
 

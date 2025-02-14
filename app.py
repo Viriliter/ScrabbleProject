@@ -12,18 +12,18 @@ from flask import Flask, render_template, Response, request, url_for, flash, red
 from flask_socketio import SocketIO, emit
 from werkzeug.exceptions import abort
 
-from game import PlayerMeta, PlayerType, PlayerState, GameMeta,  GameState, Game
+from game import PlayerMeta, PlayerType, PlayerState, GameMeta,  GameState, Game, verbalize
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "admin"
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # This container holds all game sessions in the server
 games: List[Game] = []
 
 GAME_CLEAN_INTERVAL = 10  # in seconds
 
-def clean_games():
+def clean_games() -> None:
     global games
     for game in games:
         print(game.get_game_state())
@@ -45,10 +45,48 @@ def get_game(game_id: str) -> Game:
             return game
     return None
 
-def update_lobby(game: Game):
+def update_lobby(game: Game) -> None:
     players_meta: List[PlayerMeta] = game.get_players_meta()
     # Emit the notification to all connected clients
     socketio.emit('update-lobby', {"playersMeta": [player.__dict__ for player in players_meta]})
+
+def extract_url(url: str) -> (Tuple[str, str] | Tuple[None, None]):
+    if url is None:
+        return None, None
+
+    parts = url.split("/")
+    if len(parts) >= 6:
+        game_id = parts[-2]
+        player_id = parts[-1]
+        return game_id, player_id
+    
+    return None, None
+
+@socketio.on("connect")
+def handle_connect():
+    sid = request.sid  # Unique session ID for each client
+    path = request.headers.get("Referer")  # Get the URL from which client connected
+
+    game_id, player_id = extract_url(path)
+    if game_id is None or player_id is None:
+        return
+    print(sid, type(sid))
+    game = get_game(game_id)
+    game.add_sid(sid, player_id)
+    print(f"Player {player_id} joined Game {game_id} (SID: {sid})")
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    sid = request.sid
+    path = request.headers.get("Referer")  # Get the URL from which client disconnected
+
+    game_id, player_id = extract_url(path)
+    if game_id is None or player_id is None:
+        return
+
+    game = get_game(game_id)
+    game.remove_sid(sid, player_id)
+    print(f"Player {player_id} disconnected from Game {game_id} (SID: {sid})")
 
 # Home Page
 
@@ -221,6 +259,8 @@ def get_player_name(game_id: str, player_id: str) -> Response:
 @app.route("/game/<game_id>/<player_id>/request-update", methods=["POST"])
 def request_update(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
+    print(f'Update requested by Player: {player_id}')
+
     if game is not None:
         game.update_clients()
         return jsonify({"status": "success"}), 200
@@ -232,6 +272,7 @@ def request_order(game_id: str, player_id: str) -> Response:
     if game is None:
         return jsonify({"status": "error", "message": "Game could not found"}), 404
 
+    print(f'Order requested by Player: {player_id}')
     letter = game.request_play_order(player_id)
     if letter is not None:
         return jsonify({"status": "success", "letter": letter}), 200
@@ -244,6 +285,7 @@ def request_rack(game_id: str, player_id: str) -> Response:
     if game is None:
         return jsonify({"status": "error", "message": "Game could not found"}), 404
 
+    print(f'Rack requested by Player: {player_id}')
     player = game.found_player(player_id)
     if player is None:
         return jsonify({"status": "error", "message": "Player could not be found"}), 404
@@ -259,14 +301,22 @@ def verify_word(game_id: str, player_id: str) -> Response:
     request_json = request.get_json()
 
     tiles = request_json if isinstance(request_json, list) else []
+    print(f'Word verifing for Player: {player_id}')
 
     # Print each tile's properties
     for tile in tiles:
         print(f"Letter: {tile['letter']}, ID: {tile['tileID']}, Location: {tile['location']}")
 
-    calculated_points = 10
-    
-    return jsonify({"status": "success", "points": calculated_points}), 200
+    game = get_game(game_id)
+    if game is not None:
+        word = verbalize(tiles)
+        calculated_point = game.verify_word(word)
+        if calculated_point > 0:
+            return jsonify({"status": "success", "point": calculated_point}), 200
+        else:
+            return jsonify({"status": "error", "message": "Verification failed"}), 400
+    else:
+        return jsonify({"status": "error", "message": "Game not found"}), 404
 
 @app.route("/verify-word", methods=["POST"])
 def verify_word_debug() -> Response:
@@ -289,18 +339,17 @@ def submit(game_id: str, player_id: str) -> Response:
     if request_json is None:
         return jsonify({"status": "error", "message": "Invalid request"}), 400
     
-    #game_id = request_json.get("gameID")
-    #player_id = request_json.get("playerID")
-    submitted_word = request_json.get("word")
+    tiles = request_json if isinstance(request_json, list) and all(isinstance(tile, dict) for tile in request_json) else []
 
-    if not game_id or not player_id or not submitted_word:
+    if not game_id or not player_id or tiles.count() == 0:
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
     
     game = get_game(game_id)
     if game is not None:
         player = game.found_player(player_id)
         if player is not None:
-            calculated_point = game.submit(player_id, submitted_word)  # FIXME convert to WORD type
+            word = verbalize(tiles)
+            calculated_point = game.submit(player_id, word)
             if calculated_point > 0:
                 return jsonify({"status": "success", "point": calculated_point}), 200
             else:

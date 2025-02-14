@@ -287,13 +287,14 @@ function updateDropdownText(dropdownId, text) {
 <script>
 
 const PlayerState = {
-    UNDEFINED:  0,   // The player has not been initialized yet
-    NOT_READY:  1,   // The player has entered lobby screen but not clicked the ready button yet
-    READY:      2,   // After player has clicked the ready button on lobby screen
-    WAITING:    3,   // Player is waiting for its next turn to play
-    PLAYING:    4,   // Player is playing its turn
-    WON:        5,   // Player has won the game
-    LOST:       6,   // Player has lost the game
+    UNDEFINED:      0,   // The player has not been initialized yet
+    NOT_READY:      1,   // The player has entered lobby screen but not clicked the ready button yet
+    READY:          2,   // After player has clicked the ready button on lobby screen
+    WAITING_ORDER:  3,   // Player is waiting to be ordered 
+    WAITING:        4,   // Player is waiting for its next turn to play
+    PLAYING:        5,   // Player is playing its turn
+    WON:            6,   // Player has won the game
+    LOST:           7,   // Player has lost the game
 };
 
 class Game {

@@ -250,7 +250,39 @@
         .rect-button:hover {
             background-color: #87CEEB; /* Slightly darker blue on hover */
         }
-
+        dialog {
+            border: none;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        /* Style for overlay effect */
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        /* Style for close button */
+        .close-btn {
+            margin-top: 10px;
+            padding: 5px 10px;
+            border: none;
+            background-color: #ff4d4d;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .joker-tile-container {
+            display: grid;
+            z-index: 2;
+            justify-content: center;
+            align-items: center;
+            margin: 20px;
+            gap: 10px; /* Space between cells */
+            grid-template-columns: repeat(6, var(--tile-size));
+            grid-template-rows: repeat(4, var(--tile-size));
+            width: fit-content;
+            height: fit-content;
+        }
         /* Objects */
 
         #revertButton {
@@ -487,6 +519,10 @@
             <div class="leader-board-table" id="tableLeaderboard"></div>
         </div>
     </div>
+    <dialog id="myJokerDialog">
+        <div class="joker-tile-container"></div>
+        <button class="close-btn" id="closeJokerDialog">Close</button>
+    </dialog>
 </body>
 
 <script>
@@ -507,11 +543,11 @@ const PlayerState = {
     UNDEFINED:      0,   // The player has not been initialized yet
     NOT_READY:      1,   // The player has entered lobby screen but not clicked the ready button yet
     READY:          2,   // After player has clicked the ready button on lobby screen
-    WAITING:        3,   // Player is waiting for its next turn to play
-    PLAYING:        4,   // Player is playing its turn
-    WON:            5,   // Player has won the game
-    LOST:           6,   // Player has lost the game
-    WAITING_ORDER:  7    // Player is waiting to be ordered 
+    WAITING_ORDER:  3,   // Player is waiting to be ordered 
+    WAITING:        4,   // Player is waiting for its next turn to play
+    PLAYING:        5,   // Player is playing its turn
+    WON:            6,   // Player has won the game
+    LOST:           7,   // Player has lost the game
 };
 
 const GameState = {
@@ -630,6 +666,9 @@ let currentPlayerID = null;
 /** @type {Object<string, any>} */
 let playersMeta = null;
 
+/** @type {GameState} */
+let oldGameState = null;
+
 let selectedTiles = [];
 let tileCounter = 0; // Initialize a counter for the tiles
 
@@ -716,7 +755,9 @@ function createTile(letter, points, id=-1, location = '') {
     const tile = document.createElement('div');
     tile.classList.add('tile');
     tile.textContent = letter;  // Only the letter is shown on the tile
+    tile.setAttribute('value', letter); // Set value of tile
     tile.setAttribute('location', location); // Set the location attribute
+    tile.setAttribute('joker', false);
     tile.style.position = 'relative'; 
     
     // If no ID is provided, assign a new one
@@ -731,8 +772,16 @@ function createTile(letter, points, id=-1, location = '') {
     pointsSpan.textContent = points;
     tile.appendChild(pointsSpan);
 
-    tile.addEventListener('mousedown', mouseDownHandler);
-    tile.addEventListener('click', clickHandler);
+    if (letter === ' ') {
+        tile.setAttribute('value', ''); // Set value of tile
+        tile.setAttribute('joker', true);
+        tile.addEventListener("click", () => {
+            showJokerTileDialog(tile)
+        });
+    } else {
+        tile.addEventListener('mousedown', mouseDownHandler);
+        tile.addEventListener('click', clickHandler);
+    }
 
     return tile;
 }
@@ -874,8 +923,9 @@ function mouseUpHandler(event) {
             if (parentNode.contains(tile)) parentNode.removeChild(tile);
 
             newTile.classList.add('placed-tile'); // Add placed-tile class
-
-            addSelectedTile(letter, tileID, cellLocation);
+            const letterValue = newTile.getAttribute('value');
+            const isJoker = newTile.getAttribute('joker');
+            addSelectedTile(letterValue, tileID, cellLocation, isJoker);
             verifyWord(selectedTiles);
             
         } else if (dropTarget.classList.contains('rack')) {  // Check if the drop target is the scrabble rack
@@ -924,14 +974,14 @@ function clickHandler(event) {
 //    cell.addEventListener('drop', drop);
 //});
 
-function addSelectedTile(letter, tileID, location) {
+function addSelectedTile(letter, tileID, location, isJoker) {
     const existingTile = selectedTiles.find(t => t.tileID === tileID);
     if (existingTile) {
         // Update the location if the tile is already placed
         existingTile.location = location;
     } else {
         // Add the new tile to the selectedTiles array
-        selectedTiles.push({letter, tileID, location});
+        selectedTiles.push({tileID, letter, location, isJoker});
     }
 }
 
@@ -1008,10 +1058,14 @@ document.getElementById('requestOrderButton').addEventListener('click', requestO
 document.getElementById('revertButton').addEventListener('click', revertTiles);
 document.getElementById('shuffleButton').addEventListener('click', shuffleTiles);
 document.getElementById('skipTurnButton').addEventListener('click', skipTurn);
-
 document.getElementById('submitButton').addEventListener('click', () => {
     submitWord(selectedTiles);
 });
+
+function showJokerTileDialog(tile) {
+    dialog = document.getElementById('myJokerDialog');   
+    dialog.showModal();  // Opens the dialog as a modal
+}
 
 function requestUpdate() {
     console.log('request update...');
@@ -1073,6 +1127,18 @@ function requestOrder() {
         if (data.status === 'success') {
             if (myPlayer !== null) {
                 myPlayer.setOrderLetter(data.letter);
+
+                const playerOrderDiv = document.getElementById('playerOrderDiv');
+                const rackDiv = document.getElementById('rackDiv');
+                const orderTileDiv = document.getElementById('orderTileDiv');
+
+                const tile = createTile(data.letter);
+                tile.classList.add('blocked');
+                orderTileDiv.appendChild(tile);
+
+                playerOrderDiv.style.visibility = 'collapse';
+                //rackDiv.style.visibility = 'collapse';           
+                orderTileDiv.style.visibility = 'collapse';
             }
         } else {
             alert('Unknown error: ' + data.message);
@@ -1166,11 +1232,9 @@ function submitWord(tiles=[]) {
 
     if (myPlayer.getPlayerState() !== PlayerState.PLAYING) return;
 
-    if (!verifyWord(selectedTiles)) return;
-    
     const tilesJson = JSON.stringify(tiles);
 
-    fetch(`${window.location}/approve-word`, {
+    fetch(`${window.location}/submit`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -1276,6 +1340,10 @@ function updateLeaderboard(playersMeta_) {
         if (player_.PLAYER_STATE === PlayerState.WAITING) {
             const stateIndicator = document.createElement('span');
 
+            stateIndicator.style.margin = '10px';
+            stateIndicator.style.background = 'transparent';
+            stateIndicator.style.color = 'var(--text-color)';
+
             playerContainer.appendChild(stateIndicator);
         } else if (player_.PLAYER_STATE === PlayerState.PLAYING) {
             const stateIndicator = document.createElement('span');
@@ -1286,8 +1354,9 @@ function updateLeaderboard(playersMeta_) {
             "
 
             stateIndicator.style.margin = '10px';
-            stateIndicator.style.background = 'var(--cell-color)';
+            stateIndicator.style.background = 'transparent';
             stateIndicator.style.color = 'var(--text-color)';
+            stateIndicator.title = 'Waiting player to finish the move';
 
             playerContainer.appendChild(stateIndicator);
         } else if (player_.PLAYER_STATE === PlayerState.WIN) {
@@ -1380,15 +1449,13 @@ function updateGame(gameMeta) {
             playerOrderDiv.style.visibility = 'visible';
             rackDiv.style.visibility = 'collapse';
             orderTileDiv.style.visibility = 'collapse';
-
-            if (myPlayer !== null && myPlayer.getOrderLetter() != null) {
-                console.log('GameState.PLAYER_ORDER_SELECTION:::OrderLetterFound');
-                const tile = createTile(letter);
-                orderTileDiv.appendChild(adminIndicator);
-                orderTileDiv.style.visibility = 'visible';
-            } //TODO Add else logic here
             break;
         case (GameState.GAME_STARTED):
+            console.log('Game started!', oldGameState)
+            if (oldGameState !==GameState.GAME_STARTED) {
+                console.log('Game has been started!')
+                requestUpdate();
+            }
             console.log('GameState.GAME_STARTED:::');
             playerOrderDiv.style.visibility = 'collapse';
             rackDiv.style.visibility = 'visible';
@@ -1403,6 +1470,7 @@ function updateGame(gameMeta) {
         default:
             break;
     }
+    oldGameState = myGame.getGameState();
 }
 
 function updatePlayers(playersMeta_) {
@@ -1432,9 +1500,10 @@ function updateMyRack(racks_) {
     // Empty rack check
     if (!racks_ || Object.keys(racks_).length === 0) return;
 
-    racks_.forEach((letter, count) => {
+    Object.entries(racks_).forEach(([letter, count]) => {
         for (let i = 0; i < count; i++) {
-            let tile = createTile(letter);
+            const points = letterPoints.get(letter);  // Get points based on the letter
+            let tile = createTile(letter, points);
             scrabbleRack.appendChild(tile);
         }
     });

@@ -20,11 +20,11 @@ class PlayerState:
     UNDEFINED       = 0   # The player has not been initialized yet
     NOT_READY       = 1   # The player has entered lobby screen but not clicked the ready button yet
     READY           = 2   # After player has clicked the ready button on lobby screen
-    WAITING         = 3   # Player is waiting for its next turn to play
-    PLAYING         = 4   # Player is playing its turn
-    WON             = 5   # Player has won the game
-    LOST            = 6   # Player has lost the game
-    WAITING_ORDER   = 7   # Player is waiting to be ordered 
+    WAITING_ORDER   = 3   # Player is waiting to be ordered 
+    WAITING         = 4   # Player is waiting for its next turn to play
+    PLAYING         = 5   # Player is playing its turn
+    WON             = 6   # Player has won the game
+    LOST            = 7   # Player has lost the game
 
 @dataclass(frozen=True)
 class PlayerMeta:
@@ -37,23 +37,17 @@ class PlayerMeta:
     PLAYER_POINTS: int
 
 class Player:
-    __player_id: str = ""
-    __player_name: str = ""
-    __player_type: PlayerType = PlayerType.UNDEFINED
-    __player_state: PlayerState = PlayerState.UNDEFINED
-    __player_privileges: PlayerPrivileges = PlayerPrivileges.UNDEFINED
-    __points: int = 0
-    __skip_count: int = 0
-    __play_order: int = 100  # Set something large  
-    __rack: Rack = None
-    __board: Board = None
-
-    def __init__(self, board, player_type=PlayerType.HUMAN, player_privileges=PlayerPrivileges.PLAYER):
-        self.__player_id = generate_unique_id()
-        self.__player_type = player_type
-        self.__player_privileges = player_privileges
-
+    def __init__(self, board: Board, player_type=PlayerType.HUMAN, player_privileges=PlayerPrivileges.PLAYER):
         self.__board = board
+        self.__player_id: str = generate_unique_id()
+        self.__player_name: str = ""
+        self.__player_state: PlayerState = PlayerState.UNDEFINED
+        self.__player_type: PlayerType = player_type
+        self.__player_privileges: PlayerPrivileges = player_privileges
+        self.__points: int = 0
+        self.__skip_count: int = 0
+        self.__play_order: int = 100  # Set something large
+        
         # Create game components
         self.__rack = Rack()
 
@@ -97,6 +91,12 @@ class Player:
 
     def set_play_order(self, play_order: int) -> None:
         self.__play_order = play_order
+
+    def is_order_requested(self) -> bool:
+        return True if self.__play_order < 100 else False
+
+    def is_rack_empty(self) -> bool:
+        return True if self.__rack is not None and self.__rack.count() == 0 else False
 
     def get_player_meta(self) -> PlayerMeta:
         return PlayerMeta(self.__player_id, self.__player_name, self.__player_type, self.__player_state, self.is_admin(), self.__play_order, self.__points)
@@ -147,9 +147,9 @@ class Player:
     def add_to_rack(self, letter: chr) -> None:
         self.__rack.add_to_rack(letter)
 
-    def start_game(self, tile_bag: TileBag) -> None:
-        # Before starting the game each player gets its tiles from tile bag
-        for _ in INITIAL_TILE_COUNT:
+    def initialize_rack(self, tile_bag: TileBag) -> None:
+        self.__rack.clear()
+        for _ in range(INITIAL_TILE_COUNT):
             self.__rack.add_to_rack(tile_bag.get_random_letter())
 
     def play_game() -> None:

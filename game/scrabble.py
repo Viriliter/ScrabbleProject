@@ -21,34 +21,26 @@ class GameMeta:
     GAME_STATE: GameState
 
 class Game:
-    __socketio: SocketIO = None
-
-    __game_id: str = ""
-    __game_state: GameState = GameState.UNDEFINED
-
-    __players: List[Player] = []
-    __player_count: int = 0
-    __active_player_count = 0
-    __currentPlayer: Player = None
-
-    __tile_bag: TileBag = None
-
-    __board: Board = None
-
-    __order_counter: int = -1
-    __turn_count: int = 0
-
-    def __init__(self, socketio, player_count=2):
+    def __init__(self, socketio: SocketIO, player_count=MIN_PLAYER_COUNT):
         self.__socketio = socketio
+        self.__connected_clients: Dict[str, str] = {}
+
         self.__game_id = generate_unique_id()
+        self.__game_state: GameState = GameState.UNDEFINED
+        
         self.__player_count = player_count
-        self.__players.clear()
+        self.__active_player_count = 0
+        self.__players: List[Player] = []
+        self.__currentPlayer: Player = None
 
         # Create game components
         self.__tile_bag = TileBag()
         self.__tile_bag.load(ENGLISH_TILES)  #TODO Move loading of tiles in seperate function to support different languages
-        self.__board = Board()  
-        
+        self.__board = Board(BOARD_ROW, BOARD_COL, ENGLISH_TILES, SPECIAL_CELLS)
+
+        self.__order_counter: int = -1
+        self.__turn_count: int = 0
+
         self.__set_game_state(GameState.WAITING_FOR_PLAYERS)
 
     def get_game_id(self) -> str:
@@ -118,6 +110,8 @@ class Game:
         return None if self.__players.__len__() == 0 else self.__players[0]
 
     def is_all_players_ready(self) -> bool:
+        if self.__players.__len__() == 0: return False
+
         for player in self.__players:
             if not player.get_player_state() == PlayerState.READY:
                 return False
@@ -144,9 +138,6 @@ class Game:
             if player.get_player_privilege() == PlayerPrivileges.ADMIN:
                 self.__set_game_state(GameState.GAME_OVER)
             return True
-
-    def pick_order(self, player_id: str) -> None:
-        pass
     
     def enter_player_to_game(self, player_id: str) -> bool:
         player = self.found_player(player_id)
@@ -171,7 +162,11 @@ class Game:
     def request_play_order(self, player_id: str) -> chr:
         player = self.found_player(player_id)
         if player is None: return None
-        
+
+        # Player cannot request order again if it has already requested        
+        if player.is_order_requested():
+            return None
+
         letter = self.__tile_bag.pick_letter_for_order()
         if letter is None: return None
 
@@ -184,6 +179,8 @@ class Game:
         
         self.update()
 
+        print(player_id, letter)
+
         return letter
 
     def __on_waiting_for_players(self):
@@ -192,9 +189,12 @@ class Game:
             self.__set_game_state(GameState.PLAYER_ORDER_SELECTION)
 
     def __on_player_order_selection(self):
+        if self.__players.__len__() == 0: return
+
         # Check if all players have selected their order
         for player in self.__players:
-            if not (player.get_player_state() == PlayerState.WAITING):
+            print(player.get_player_state(), PlayerState.WAITING)
+            if (player.get_player_state() < PlayerState.WAITING):
                 return
         print('Game has been started!!!!!!!!!!!!!')
         self.__set_game_state(GameState.GAME_STARTED)
@@ -204,13 +204,20 @@ class Game:
         if self.check_game_over():
             self.__set_game_state(GameState.GAME_OVER)
         else:
+            # At the very beginning of the game
             if (self.__currentPlayer == None):
+                for player in self.__players:
+                    if player.is_rack_empty():
+                        player.initialize_rack(self.__tile_bag)
+                
                 self.__currentPlayer = self.get_first_player()
                 self.__currentPlayer.set_player_state(PlayerState.PLAYING)
             
             iter = 0
             while self.__currentPlayer.get_player_state != PlayerState.PLAYING and iter < self.__player_count:
+                self.__currentPlayer.set_player_state(PlayerState.WAITING)
                 self.__currentPlayer = self.next_turn()  # Move to next player
+                iter += 1
 
             self.__currentPlayer.set_player_state(PlayerState.PLAYING)
         
@@ -231,6 +238,11 @@ class Game:
 
         self.update_clients()
 
+    def verify_word(self, word: WORD) -> int:
+        points = self.__board.calculate_points(word)
+
+        return points
+
     def submit(self, player_id: str, word: WORD) -> int:
         if self.__game_state != GameState.GAME_STARTED:
             return
@@ -243,7 +255,7 @@ class Game:
         if not (player.get_player_id() == self.__currentPlayer.get_player_id()):
             return
 
-        points = self.__board.calculate_points()
+        points = self.verify_word(word)
 
         if points > 0:
             player.add_points(points)
@@ -280,22 +292,18 @@ class Game:
         return self.__order_counter[self.__order_counter]
     
     def check_game_over(self) -> bool:
-        print('-----------0')
         if (self.get_game_state() == GameState.GAME_OVER):
             return True
-        print('-----------1')
         # If game has not been started yet game is not over
         if (self.get_game_state() != GameState.GAME_STARTED):
             return False
 
-        print('self.__active_player_count:', self.__active_player_count)
         if (self.__active_player_count <= 1):
             return True
-        print('self.__tile_bag.get_remaining_tiles():', self.__tile_bag.get_remaining_tiles())
+
         if (self.__tile_bag.get_remaining_tiles() == 0):
             return True
         
-        print('-----------2')
         skip_count_flag = True
         for player in self.__players:
             if player.get_skip_count() >= 2:
@@ -305,7 +313,6 @@ class Game:
         if skip_count_flag:
             return True
         
-        print('-----------3')
         return False
 
     def get_winner(self) -> Player:
@@ -317,10 +324,20 @@ class Game:
                 winner = player
         return winner
 
+    def add_sid(self, sid: str, player_id: str) -> None:
+        self.__connected_clients[sid] = player_id
+
+    def remove_sid(self, sid: str, player_id: str) -> None:
+        self.__connected_clients.pop(sid, None)
+
     def update_clients(self) -> None:
         players_meta: List[PlayerMeta] = self.get_players_meta()
         # Emit the notification to all connected clients
         self.__socketio.emit('update-players', {"playersMeta": [player.__dict__ for player in players_meta]})
         self.__socketio.emit('update-game', {"gameMeta": self.get_game_meta().__dict__})
         self.__socketio.emit('update-board', {"board": self.__board.serialize()})
-        #self.__socketio.emit('update-racks', {"racks": [player.get_serialized_rack() for player in self.__players]})
+        
+        for sid, player_id in self.__connected_clients.items():
+            player = self.found_player(player_id)
+            if player is not None:
+                self.__socketio.emit("update-racks", {"racks": player.get_serialized_rack()}, to=sid)

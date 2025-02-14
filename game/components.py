@@ -4,16 +4,11 @@ import random
 from .globals import *
 
 class TileBag:
-    __reference_tiles: Dict[chr, Tuple[int, int]] = None
-    __tiles: Dict[chr, Tuple[int, int]] = {}
-    __remaning_tiles: int = 0
-    __picked_letters: List[chr] = []
-
     def __init__(self):
-        self.__reference_tiles = {}
-        self.__tiles = {}
-        self.__remaning_tiles = 0
-        self.__picked_letters.clear()
+        self.__reference_tiles: Dict[chr, Tuple[int, int]] = {}
+        self.__tiles: Dict[chr, Tuple[int, int]] = {}
+        self.__remaning_tiles: int = 0
+        self.__picked_letters: List[chr] = []
 
     def load(self, tiles: Dict[chr, int]) -> None:
         self.__reference_tiles = tiles
@@ -62,10 +57,8 @@ class TileBag:
         return letter
 
 class Rack:
-    __container: List[chr] = []
-
     def __init__(self):
-        self.__container.clear()
+        self.__container: List[chr] = []
         
     def add_to_rack(self, letter: chr) -> None:
         self.__container.append(letter)
@@ -88,11 +81,17 @@ class Rack:
                 letter_counts[letter] = 1
         return letter_counts
 
+    def clear(self) -> None:
+        self.__container.clear()
+
+    def count(self) -> int:
+        return self.__container.__len__()
+
 class Dictionary:
     __tiles: Dict[str, int] = {}
 
     def __init__(self, tiles: Dict[str, int]):
-        self.__tiles = tiles.copy()
+        Dictionary.__tiles = tiles.copy()
 
     @staticmethod
     def validate_word(word: str) -> bool:
@@ -110,15 +109,14 @@ class Dictionary:
         return Dictionary.calculate_points(word)
 
 class Board:
-    __row: int = 0
-    __col: int = 0
-    __cells: List[chr] = []
-    __special_cells: Dict[CL, CL] = {}
-    __tiles: Dict[str, Tuple[int, int]]
-    
-    def __init__(self, row=BOARD_ROW, col=BOARD_COL, tiles=ENGLISH_TILES, special_cells=SPECIAL_CELLS):
-        self.__row = row
-        self.__col = col
+    def __init__(self,
+                 row=BOARD_ROW,
+                 col=BOARD_COL, 
+                 tiles: Dict[str, Tuple[int, int]]=ENGLISH_TILES,
+                 special_cells: Dict[CL, CT]=SPECIAL_CELLS):
+        self.__row: int = row
+        self.__col: int = col
+        self.__cells: List[chr] = []
         self.__special_cells = special_cells.copy()
         self.__tiles = tiles.copy()
 
