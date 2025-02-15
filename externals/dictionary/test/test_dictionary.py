@@ -39,7 +39,7 @@ class TestDictionary(unittest.TestCase):
         })
 
     def test_loads_a_dictionary(self):
-        dict_path = get_absolute_path('dictionary/test/data/dictionary.dict')
+        dict_path = get_absolute_path('externals/dictionary/test/data/dictionary.dict')
         with open(os.path.join(os.path.dirname(__file__), 'data', dict_path), 'rb') as f:
             data = f.read()
         dic = Dictionary("test")
@@ -50,14 +50,14 @@ class TestDictionary(unittest.TestCase):
         self.assertEqual(dic.match("LAZY").letter, 'Y')
 
     def test_extends_a_dictionary(self):
-        dict_path = get_absolute_path('dictionary/test/data/dictionary.dict')
+        dict_path = get_absolute_path('externals/dictionary/test/data/dictionary.dict')
         with open(os.path.join(os.path.dirname(__file__), 'data', dict_path), 'rb') as f:
             data = f.read()
         dic = Dictionary("test")
         dic.load_dawg(BytesIO(data))
 
-        #self.assertTrue(dic.has_word("QUICK"))
-        #self.assertFalse(dic.has_word("AARDVAARK"))
+        self.assertTrue(dic.has_word("QUICK"))
+        self.assertFalse(dic.has_word("AARDVAARK"))
         self.assertFalse(dic.has_sequence("VAAR"))
 
         dic.add_word("AARDVAARK")
@@ -93,7 +93,7 @@ class TestDictionary(unittest.TestCase):
         self.assertEqual(len(s[1].postLetters), 0)
 
     def test_hangmen(self):
-        dict_path = get_absolute_path('dictionary/test/data/dictionary.dict')
+        dict_path = get_absolute_path('externals/dictionary/test/data/dictionary.dict')
         with open(os.path.join(os.path.dirname(__file__), 'data', dict_path), 'rb') as f:
             data = f.read()
         dic = Dictionary("test")
