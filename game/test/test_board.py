@@ -12,7 +12,7 @@ class TestBoard(unittest.TestCase):
 
     @measure_time
     def test_serialize_words_horizontal(self):
-        board = Board(dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
 
         word_list = {
             'ASTRONOMY': [TILE(0, 0, 'A'),TILE(0, 1, 'S'),TILE(0, 2, 'T'),TILE(0, 3, 'R'),TILE(0, 4, 'O'),TILE(0, 5, 'N'),TILE(0, 6, 'O'),TILE(0, 7, 'M'),TILE(0, 8, 'Y')],
@@ -27,7 +27,7 @@ class TestBoard(unittest.TestCase):
     
     @measure_time
     def test_serialize_words_verticals(self):
-        board = Board(dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
 
         word_list = {
             'PYTHON': [TILE(0, 0, 'P'),TILE(1, 0, 'Y'),TILE(2, 0, 'T'),TILE(3, 0, 'H'),TILE(4, 0, 'O'),TILE(5, 0, 'N')],
@@ -42,10 +42,7 @@ class TestBoard(unittest.TestCase):
 
     @measure_time
     def test_validate_words_horizontals(self):
-        language = LANGUAGES['ENG']
-        dict = DictionaryWrapper(language)
-
-        board = Board(dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
 
         word_list = {
             'ASTRONOMY': [TILE(0, 0, 'A'),TILE(0, 1, 'S'),TILE(0, 2, 'T'),TILE(0, 3, 'R'),TILE(0, 4, 'O'),TILE(0, 5, 'N'),TILE(0, 6, 'O'),TILE(0, 7, 'M'),TILE(0, 8, 'Y')],
@@ -61,10 +58,7 @@ class TestBoard(unittest.TestCase):
     
     @measure_time
     def test_validate_words_verticals(self):
-        language = LANGUAGES['ENG']
-        dict = DictionaryWrapper(language)
-
-        board = Board(dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
 
         word_list = {
             'PYTHON': [TILE(0, 0, 'P'),TILE(1, 0, 'Y'),TILE(2, 0, 'T'),TILE(3, 0, 'H'),TILE(4, 0, 'O'),TILE(5, 0, 'N')],
@@ -80,10 +74,7 @@ class TestBoard(unittest.TestCase):
 
     @measure_time
     def test_validate_words_diagonal(self):
-        language = LANGUAGES['ENG']
-        dict = DictionaryWrapper(language)
-
-        board = Board(dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
 
         word_list = {
             'PYTHON': [TILE(0, 0, 'P'),TILE(1, 1, 'Y'),TILE(2, 2, 'T'),TILE(3, 3, 'H'),TILE(4, 4, 'O'),TILE(5, 5, 'N')],
