@@ -176,5 +176,5 @@ class LANG_KEYS:
     ENG = "ENG"
     TUR = "TUR"
 
-LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "/dictionaries/CSW2021.dict"),
-                                        LANG_KEYS.TUR: LANGUAGE(ALPH_TURKISH, "/dictionaries/British_English.dict")}
+LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "dictionaries/CSW2021_English.dict"),
+                                        LANG_KEYS.TUR: LANGUAGE(ALPH_TURKISH, "dictionaries/British_English.dict")}

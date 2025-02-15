@@ -21,6 +21,8 @@ class GameMeta:
     GAME_STATE: GameState
 
 class Game:
+    default_lang = LANG_KEYS.ENG
+
     def __init__(self, socketio: SocketIO, player_count=MIN_PLAYER_COUNT):
         self.__socketio = socketio
         self.__connected_clients: Dict[str, str] = {}
@@ -40,12 +42,12 @@ class Game:
 
         self.__turn_count: int =  -1
 
-        self.load_language("ENG")  #TODO Make it parametric for different language support
+        self.load_language(self.default_lang)  #TODO Make it parametric for different language support
         
         self.__set_game_state(GameState.WAITING_FOR_PLAYERS)
 
     def load_language(self, lang_key: LANG_KEYS) -> None:
-        self.__dictionary = Dictionary(LANGUAGES[lang_key])
+        self.__dictionary = DictionaryWrapper(LANGUAGES[lang_key])
 
         self.__tile_bag = TileBag()
         self.__tile_bag.load(self.__dictionary.get_alphabet())

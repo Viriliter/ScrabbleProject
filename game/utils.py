@@ -1,6 +1,7 @@
 import random
 import string
 import re
+import time
 from pathlib import Path
 
 from typing import List, Dict, Tuple
@@ -13,7 +14,6 @@ def generate_unique_id(length=8) ->str :
     unique_id = ''.join(random.choice(characters) for _ in range(length))
     return unique_id
 
-#'id': tileID, 'value': letter, 'loc': location, 'isJoker': isJoker
 def verbalize(tiles: Dict[str, Tuple[LETTER, str, str]]) -> WORD:
     word: WORD = []
     for id, properties in tiles.items():
@@ -38,3 +38,12 @@ def get_absolute_path(relative_path: str) -> str:
     absolute_path = (parent_dir / relative_path).resolve()
 
     return str(absolute_path)
+
+def measure_time(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter_ns()
+        result = func(*args, **kwargs)
+        elapsed_time = time.perf_counter_ns() - start_time
+        print(f"{func.__name__} executed in {elapsed_time/10**3} microseconds")
+        return result
+    return wrapper

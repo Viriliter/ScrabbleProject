@@ -1,7 +1,7 @@
 # Import specific classes or functions to expose them at the package level
 from .globals import MIN_PLAYER_COUNT, INITIAL_TILE_COUNT, BOARD_ROW, BOARD_COL, SPECIAL_CELLS
 from .utils import *
-from .components import TileBag, Rack, Board, Dictionary
+from .components import TileBag, Rack, Board, DictionaryWrapper
 from .player import PlayerType, PlayerPrivileges, PlayerState, PlayerMeta, Player
 from .scrabble import Board, GameMeta, GameState, Game
 
@@ -13,10 +13,11 @@ __all__ = [
     'BOARD_COL',
     'SPECIAL_CELLS',
     'generate_unique_id',
+    'get_absolute_path',
     'TileBag',
     'Rack',
     'Board',
-    'Dictionary',
+    'DictionaryWrapper',
     'PlayerType',
     'PlayerPrivileges',
     'PlayerState',
