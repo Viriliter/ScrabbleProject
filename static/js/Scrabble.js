@@ -217,21 +217,13 @@ function verifyWord(tiles) {
             // Update the points box with the calculated points
             if (data.points>0) {
                 updateTentativePoints(data.points)
-
-                alert('Word verified successfully!');
-                return true;
             } else {
-                alert('Word verification failed!');
-                return false;
             }
         } else {
-            alert('Unknown error: ' + data.message);
-            return false;
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        return false;
     });
 }
 
@@ -446,7 +438,6 @@ function submitWord(tiles=[]) {
             // Update the points box with the calculated points
             if (data.points>0) {
                 document.getElementById('myPlayerPoints').textContent = data.points;
-                alert('Word verified successfully!');
             } else {
                 alert('Word verification failed!');
             }
@@ -688,6 +679,33 @@ function updatePlayers(playersMeta_) {
 function updateBoard(board_) {
     console.log('boards updating...', board_);
 
+    const gameBoard = document.getElementById('gameBoard');
+    
+    // Clear game board
+    let cells = gameBoard.querySelectorAll('.transparent-cell')
+    cells.forEach(cell => {
+        if (cell.getAttribute('location') !== null) {
+            cell.innerHTML = ''
+        }
+    });
+
+    if (!board_ || board_.length === 0) {
+        return;
+    }
+
+    // Update game board according to serialized board info 
+    Object.entries(board_).forEach(([cl, letter]) => {
+        const cellId = `cell_${cl}`;
+        console.log(cellId)
+        const targetCell = document.getElementById(cellId);
+
+        const points = letterPoints.get(letter);  // Get points based on the letter
+        const newTile = createTile(letter, points, -1, cl);
+
+        targetCell.appendChild(newTile);
+        newTile.classList.add('blocked');
+        targetCell.classList.add('blocked');
+    });
 }
 
 function updateMyRack(racks_) {

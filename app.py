@@ -310,9 +310,9 @@ def verify_word(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
     if game is not None:
         word = verbalize(tiles)
-        calculated_point = game.verify_word(word)
-        if calculated_point > 0:
-            return jsonify({"status": "success", "point": calculated_point}), 200
+        calculated_points = game.verify_word(word)
+        if calculated_points > 0:
+            return jsonify({"status": "success", "points": calculated_points}), 200
         else:
             return jsonify({"status": "error", "message": "Verification failed"}), 400
     else:
@@ -360,7 +360,7 @@ def submit(game_id: str, player_id: str) -> Response:
     
     tiles = request_json if isinstance(request_json, list) and all(isinstance(tile, dict) for tile in request_json) else []
 
-    if not game_id or not player_id or tiles.count() == 0:
+    if not game_id or not player_id or len(tiles) == 0:
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
     
     game = get_game(game_id)
@@ -368,9 +368,9 @@ def submit(game_id: str, player_id: str) -> Response:
         player = game.found_player(player_id)
         if player is not None:
             word = verbalize(tiles)
-            calculated_point = game.submit(player_id, word)
-            if calculated_point > 0:
-                return jsonify({"status": "success", "point": calculated_point}), 200
+            calculated_points = game.submit(player_id, word)
+            if calculated_points > 0:
+                return jsonify({"status": "success", "points": calculated_points}), 200
             else:
                 return jsonify({"status": "error", "message": "Word cannot be submitted"}), 400
         else:

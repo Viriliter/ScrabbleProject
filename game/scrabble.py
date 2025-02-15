@@ -282,6 +282,8 @@ class Game:
             for letter in word:
                 player.remove_from_rack(letter.letter)
 
+            self.__board.place_word(word)
+
             for _ in range(letter_count):
                 newLetter = self.__tile_bag.get_random_letter()
                 player.add_to_rack(newLetter)

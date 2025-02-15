@@ -2,10 +2,40 @@ from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
 # Cell Location
-@dataclass(frozen=True)
 class CL:
-    row: int
-    col: int
+    def __init__(self, row, col):
+        self._row = row
+        self._col = col
+
+    @property
+    def row(self):
+        return self._row
+
+    @row.setter
+    def row(self, value):
+        if not isinstance(value, int) or value < 0:
+            raise ValueError("Row must be a non-negative integer")
+        self._row = value
+
+    @property
+    def col(self):
+        """Column property (getter)"""
+        return self._col
+
+    @col.setter
+    def col(self, value):
+        if not isinstance(value, int) or value < 0:
+            raise ValueError("Column must be a non-negative integer")
+        self._col = value
+    
+    def __hash__(self):
+        return hash((self.row, self.col))
+
+    def __eq__(self, other):
+        return isinstance(other, CL) and self.row == other.row and self.col == other.col
+    
+    def __str__(self):
+        return f'{chr(65 + self._col - 1)}{self._row}'
 
 # Cell Type
 class CT:
@@ -17,67 +47,67 @@ class CT:
 
 # (CellLocation, CellType)
 SPECIAL_CELLS: Dict[CL, CT] = {
-    CL(0,0),    CT.TRIPLE_WORD,
-    CL(0,7),    CT.TRIPLE_WORD,
-    CL(0,14),   CT.TRIPLE_WORD,
-    CL(7,0),    CT.TRIPLE_WORD,
-    CL(7,14),   CT.TRIPLE_WORD,
-    CL(14,0),   CT.TRIPLE_WORD,
-    CL(14,7),   CT.TRIPLE_WORD,
-    CL(14,14),  CT.TRIPLE_WORD,
-    CL(1,5),    CT.TRIPLE_LETTER,
-    CL(1,9),    CT.TRIPLE_LETTER,
-    CL(5,1),    CT.TRIPLE_LETTER,
-    CL(5,5),    CT.TRIPLE_LETTER,
-    CL(5,9),    CT.TRIPLE_LETTER,
-    CL(5,13),   CT.TRIPLE_LETTER,
-    CL(9,1),    CT.TRIPLE_LETTER,
-    CL(9,5),    CT.TRIPLE_LETTER,
-    CL(9,9),    CT.TRIPLE_LETTER,
-    CL(9,13),   CT.TRIPLE_LETTER,
-    CL(13,5),   CT.TRIPLE_LETTER,
-    CL(13,9),   CT.TRIPLE_LETTER,
-    CL(7,7),    CT.DOUBLE_WORD, # Center Cell
-    CL(1,1),    CT.DOUBLE_WORD,
-    CL(2,2),    CT.DOUBLE_WORD,
-    CL(3,3),    CT.DOUBLE_WORD,
-    CL(4,4),    CT.DOUBLE_WORD,
-    CL(10,10),  CT.DOUBLE_WORD,
-    CL(11,11),  CT.DOUBLE_WORD,
-    CL(12,12),  CT.DOUBLE_WORD,
-    CL(13,13),  CT.DOUBLE_WORD,
-    CL(1,13),   CT.DOUBLE_WORD,
-    CL(2,12),   CT.DOUBLE_WORD,
-    CL(3,11),   CT.DOUBLE_WORD,
-    CL(4,10),   CT.DOUBLE_WORD,
-    CL(10,4),   CT.DOUBLE_WORD,
-    CL(11,3),   CT.DOUBLE_WORD,
-    CL(12,2),   CT.DOUBLE_WORD,
-    CL(13,1),   CT.DOUBLE_WORD,
-    CL(0,3),    CT.DOUBLE_LETTER,
-    CL(0,11),   CT.DOUBLE_LETTER,
-    CL(2,6),    CT.DOUBLE_LETTER,
-    CL(2,8),    CT.DOUBLE_LETTER,
-    CL(3,0),    CT.DOUBLE_LETTER,
-    CL(3,7),    CT.DOUBLE_LETTER,
-    CL(3,14),   CT.DOUBLE_LETTER,
-    CL(6,2),    CT.DOUBLE_LETTER,
-    CL(6,6),    CT.DOUBLE_LETTER,
-    CL(6,8),    CT.DOUBLE_LETTER,
-    CL(6,12),   CT.DOUBLE_LETTER,
-    CL(7,3),    CT.DOUBLE_LETTER,
-    CL(7,11),   CT.DOUBLE_LETTER,
-    CL(8,2),    CT.DOUBLE_LETTER,
-    CL(8,6),    CT.DOUBLE_LETTER,
-    CL(8,8),    CT.DOUBLE_LETTER,
-    CL(8,12),   CT.DOUBLE_LETTER,
-    CL(11,0),   CT.DOUBLE_LETTER,
-    CL(11,7),   CT.DOUBLE_LETTER,
-    CL(11,14),  CT.DOUBLE_LETTER,
-    CL(12,6),   CT.DOUBLE_LETTER,
-    CL(12,8),   CT.DOUBLE_LETTER,
-    CL(14,3),   CT.DOUBLE_LETTER,
-    CL(14,11),  CT.DOUBLE_LETTER
+    CL(0,0):    CT.TRIPLE_WORD,
+    CL(0,7):    CT.TRIPLE_WORD,
+    CL(0,14):   CT.TRIPLE_WORD,
+    CL(7,0):    CT.TRIPLE_WORD,
+    CL(7,14):   CT.TRIPLE_WORD,
+    CL(14,0):   CT.TRIPLE_WORD,
+    CL(14,7):   CT.TRIPLE_WORD,
+    CL(14,14):  CT.TRIPLE_WORD,
+    CL(1,5):    CT.TRIPLE_LETTER,
+    CL(1,9):    CT.TRIPLE_LETTER,
+    CL(5,1):    CT.TRIPLE_LETTER,
+    CL(5,5):    CT.TRIPLE_LETTER,
+    CL(5,9):    CT.TRIPLE_LETTER,
+    CL(5,13):   CT.TRIPLE_LETTER,
+    CL(9,1):    CT.TRIPLE_LETTER,
+    CL(9,5):    CT.TRIPLE_LETTER,
+    CL(9,9):    CT.TRIPLE_LETTER,
+    CL(9,13):   CT.TRIPLE_LETTER,
+    CL(13,5):   CT.TRIPLE_LETTER,
+    CL(13,9):   CT.TRIPLE_LETTER,
+    CL(7,7):    CT.DOUBLE_WORD, # Center Cell
+    CL(1,1):    CT.DOUBLE_WORD,
+    CL(2,2):    CT.DOUBLE_WORD,
+    CL(3,3):    CT.DOUBLE_WORD,
+    CL(4,4):    CT.DOUBLE_WORD,
+    CL(10,10):  CT.DOUBLE_WORD,
+    CL(11,11):  CT.DOUBLE_WORD,
+    CL(12,12):  CT.DOUBLE_WORD,
+    CL(13,13):  CT.DOUBLE_WORD,
+    CL(1,13):   CT.DOUBLE_WORD,
+    CL(2,12):   CT.DOUBLE_WORD,
+    CL(3,11):   CT.DOUBLE_WORD,
+    CL(4,10):   CT.DOUBLE_WORD,
+    CL(10,4):   CT.DOUBLE_WORD,
+    CL(11,3):   CT.DOUBLE_WORD,
+    CL(12,2):   CT.DOUBLE_WORD,
+    CL(13,1):   CT.DOUBLE_WORD,
+    CL(0,3):    CT.DOUBLE_LETTER,
+    CL(0,11):   CT.DOUBLE_LETTER,
+    CL(2,6):    CT.DOUBLE_LETTER,
+    CL(2,8):    CT.DOUBLE_LETTER,
+    CL(3,0):    CT.DOUBLE_LETTER,
+    CL(3,7):    CT.DOUBLE_LETTER,
+    CL(3,14):   CT.DOUBLE_LETTER,
+    CL(6,2):    CT.DOUBLE_LETTER,
+    CL(6,6):    CT.DOUBLE_LETTER,
+    CL(6,8):    CT.DOUBLE_LETTER,
+    CL(6,12):   CT.DOUBLE_LETTER,
+    CL(7,3):    CT.DOUBLE_LETTER,
+    CL(7,11):   CT.DOUBLE_LETTER,
+    CL(8,2):    CT.DOUBLE_LETTER,
+    CL(8,6):    CT.DOUBLE_LETTER,
+    CL(8,8):    CT.DOUBLE_LETTER,
+    CL(8,12):   CT.DOUBLE_LETTER,
+    CL(11,0):   CT.DOUBLE_LETTER,
+    CL(11,7):   CT.DOUBLE_LETTER,
+    CL(11,14):  CT.DOUBLE_LETTER,
+    CL(12,6):   CT.DOUBLE_LETTER,
+    CL(12,8):   CT.DOUBLE_LETTER,
+    CL(14,3):   CT.DOUBLE_LETTER,
+    CL(14,11):  CT.DOUBLE_LETTER
 } 
 
 # Define LETTER as string to represent single character

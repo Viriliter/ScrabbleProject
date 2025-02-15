@@ -153,7 +153,7 @@ class Board:
 
     def place_tile(self, tile: TILE) -> bool:
         if self.is_placable(tile):
-            self.__cells[tile.row][tile.col] == tile.letter
+            self.__cells[tile.row][tile.col] = tile.letter
             return True
         else:
             # Cannot be placed since it is already occupied cell
@@ -247,29 +247,30 @@ class Board:
         
         alphabet = self.__dictionary.get_alphabet()
 
-        # Calculate points for horizontal words
+        word_multiplier = 1
+        word_points = 0
         for tile in word:
-            word_points = 0
-            word_multiplier = 1
 
             # Add the letter points
             _, letter_points = alphabet.get(tile.letter, (None, 0))
-            word_points += letter_points
 
             # Check if the current cell has special multiplier
-            if (tile.row, tile.col) in self.__special_cells and not is_branched:
-                _, cell_type = self.__special_cells.get(CL(tile.row, tile.col), (None, CT.ORDINARY))
+            if not is_branched:
+                cell_type = self.__special_cells.get(CL(tile.row, tile.col), CT.ORDINARY)
                 if cell_type == CT.DOUBLE_LETTER:
                     word_points += letter_points * 2
                 elif cell_type == CT.TRIPLE_LETTER:
                     word_points += letter_points * 3
                 elif cell_type == CT.DOUBLE_WORD:
+                    word_points += letter_points
                     word_multiplier *= 2
                 elif cell_type == CT.TRIPLE_WORD:
+                    word_points += letter_points
                     word_multiplier *= 3
                 else:
-                    pass
-            total_points += word_points * word_multiplier
+                    word_points += letter_points
+        
+        total_points =  word_points * word_multiplier
 
         if (is_branched): return total_points
 
@@ -286,10 +287,10 @@ class Board:
     def clear(self) -> None:
         self.__cells = [['' for _ in range(self.__col)] for _ in range(self.__row)]
 
-    def serialize(self) -> Dict[Tuple[int, int], LETTER]:
-        board_state = {}
+    def serialize(self) -> Dict[str, LETTER]:
+        result = {}
         for row in range(self.__row):
             for col in range(self.__col):
                 if self.__cells[row][col] != '':
-                    board_state[(row, col)] = self.__cells[row][col]
-        return board_state
+                    result[str(CL(row, col))] = self.__cells[row][col]
+        return result

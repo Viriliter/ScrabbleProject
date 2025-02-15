@@ -4,7 +4,7 @@ import re
 import time
 from pathlib import Path
 
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 
 from .globals import *
 
@@ -14,13 +14,19 @@ def generate_unique_id(length=8) ->str :
     unique_id = ''.join(random.choice(characters) for _ in range(length))
     return unique_id
 
-def verbalize(tiles: Dict[str, Tuple[LETTER, str, str]]) -> WORD:
-    word: WORD = []
-    for id, properties in tiles.items():
-        letter = properties["letter"]
-        loc = properties["loc"]
+def serialize_dict(d: Dict[Any, Any]) -> Dict[str, Any]:
+    r = {}
+    for key, value in d.items():
+        r[str(key)] = value
+    return r
 
-        match = re.match(r"([A-Z]+)(\d+)", loc)
+def verbalize(tiles: List[Tuple[LETTER, str, str]]) -> WORD:
+    word: WORD = []
+    for tile in tiles:
+        letter = tile["letter"]
+        location = tile["location"]
+
+        match = re.match(r"([A-Z]+)(\d+)", location)
         if not match:
             return None  # Invalid format
 

@@ -92,7 +92,7 @@
 
     </style>
 </head>
-<body>     
+<body>
     <div class="container" style="display: grid; grid-template-columns: repeat(2, auto); grid-template-rows: repeat(1, auto); align-items: start;">
         <div class="container">
             <div class="top-container">
@@ -222,7 +222,7 @@
                                 } else {
                                     cellLocation = 'cell_' + `${columnHeaders[col]}` + `${rowHeaders[row]}`
                                 }
-                                document.write(`<div location="${cellLocation}" class="transparent-cell" data-row="${row+1}" data-col="${col+1}"></div>`);
+                                document.write(`<div id="${cellLocation}" location="${cellLocation}" class="transparent-cell" data-row="${row+1}" data-col="${col+1}"></div>`);
                             }
                         }
                     </script>

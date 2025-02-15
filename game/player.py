@@ -138,7 +138,7 @@ class Player:
         if not (self.__player_state == PlayerState.PLAYING):
             return
 
-    def get_serialized_rack(self) -> None:
+    def get_serialized_rack(self) -> Dict[LETTER, int]:
         return self.__rack.serialize()
 
     def remove_from_rack(self, letter: LETTER) -> None:
