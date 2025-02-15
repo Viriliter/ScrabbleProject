@@ -80,22 +80,25 @@ SPECIAL_CELLS: Dict[CL, CT] = {
     CL(14,11),  CT.DOUBLE_LETTER
 } 
 
+# Define LETTER as string to represent single character
+LETTER = str
+
 @dataclass(frozen=True)
-class LETTER:
+class TILE:
     row: int
     col: int
-    letter: chr
+    letter: LETTER
 
-# Define WORD as a List of LETTERs
-WORD = List[LETTER]
+# Define WORD as a list of TILEs
+WORD = List[TILE]
 
 # Define Alphabet as a Dict includes letters with their counts and points   
-ALPHABET = Dict[str, Tuple[int, int]]
+ALPHABET = Dict[LETTER, Tuple[int, int]]
 
 @dataclass(frozen=True)
 class LANGUAGE:
     alphabet: ALPHABET
-    dataset: str
+    uri: str
 
 BOARD_ROW: int = 15
 
@@ -169,5 +172,9 @@ ALPH_TURKISH: ALPHABET = {
     ' ': (2, 0)
 }
 
-LANGUAGES: Dict[str, LANGUAGE] = {"English": LANGUAGE(ALPH_ENGLISH, ""),
-                                  "Turkish": LANGUAGE(ALPH_TURKISH, "")}
+class LANG_KEYS:
+    ENG = "ENG"
+    TUR = "TUR"
+
+LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "/dictionaries/CSW2021.dict"),
+                                        LANG_KEYS.TUR: LANGUAGE(ALPH_TURKISH, "/dictionaries/British_English.dict")}

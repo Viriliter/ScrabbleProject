@@ -141,10 +141,10 @@ class Player:
     def get_serialized_rack(self) -> None:
         return self.__rack.serialize()
 
-    def remove_from_rack(self, letter: chr) -> None:
+    def remove_from_rack(self, letter: LETTER) -> None:
         self.__rack.remove_from_rack(letter)
 
-    def add_to_rack(self, letter: chr) -> None:
+    def add_to_rack(self, letter: LETTER) -> None:
         self.__rack.add_to_rack(letter)
 
     def initialize_rack(self, tile_bag: TileBag) -> None:

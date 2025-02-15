@@ -34,16 +34,23 @@ class Game:
         self.__currentPlayer: Player = None
 
         # Create game components
-        self.__tile_bag = TileBag()
-        self.__tile_bag.load(ALPH_ENGLISH)  #TODO Move loading of tiles in seperate function to support different languages
-        self.__board = Board(BOARD_ROW, BOARD_COL, ALPH_ENGLISH, SPECIAL_CELLS)
+        self.__dictionary = None
+        self.__tile_bag = None
+        self.__board = None
 
         self.__turn_count: int =  -1
 
+        self.load_language("ENG")  #TODO Make it parametric for different language support
+        
         self.__set_game_state(GameState.WAITING_FOR_PLAYERS)
 
-    def load_language(self) -> None:
-        pass
+    def load_language(self, lang_key: LANG_KEYS) -> None:
+        self.__dictionary = Dictionary(LANGUAGES[lang_key])
+
+        self.__tile_bag = TileBag()
+        self.__tile_bag.load(self.__dictionary.get_alphabet())
+
+        self.__board = Board(self.__dictionary, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
 
     def get_game_id(self) -> str:
         return self.__game_id
@@ -167,7 +174,7 @@ class Game:
 
         return True
 
-    def request_play_order(self, player_id: str) -> chr:
+    def request_play_order(self, player_id: str) -> LETTER:
         player = self.found_player(player_id)
         if player is None: return None
 
@@ -281,21 +288,24 @@ class Game:
 
         return points
 
-    ##
-    # @brief Calculate the point of the player's word and pass the turn to the next player
-    # @param word The word that the player has played
-    # @return The player who will play next
-    ##
     def next_turn(self) -> Player:
+        """
+        @brief Calculate the point of the player's word and pass the turn to the next player
+
+        @param word: The player id
+        @return: The player who will play next
+        """
         self.__turn_count = (self.__turn_count + 1) % self.__players.__len__()
         self.__currentPlayer = self.__players[self.__turn_count]
         return self.__currentPlayer
-    
-    ##
-    # @brief Skip the turn of the current player
-    # @return The player who will play next
-    ##
+
     def skip_turn(self, player_id: str) -> Player:
+        """
+        @brief Skip the turn of the current player
+        
+        @param player_id: The player id
+        @return: The player who will play next
+        """
         player = self.found_player(player_id)
         if player is None: return None
         if not (player.get_player_state() == PlayerState.PLAYING): return None
