@@ -1,0 +1,31 @@
+@font-face {
+    font-family: 'Eurostile';
+    src: url('../fonts/eurostile.TTF') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+:root {
+    --tile-size: 42px;
+    --icon-size: 36px;
+    --text-color: white;
+    --background-color: #2A6334;  /* Dark green background */
+    --cell-color: #3F8E41;   /* Light green foreground */
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.tile .points {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 12px;
+    font-weight: normal;
+    user-select: none; /* Disable text selection */
+}

@@ -35,13 +35,15 @@ class Game:
 
         # Create game components
         self.__tile_bag = TileBag()
-        self.__tile_bag.load(ENGLISH_TILES)  #TODO Move loading of tiles in seperate function to support different languages
-        self.__board = Board(BOARD_ROW, BOARD_COL, ENGLISH_TILES, SPECIAL_CELLS)
+        self.__tile_bag.load(ALPH_ENGLISH)  #TODO Move loading of tiles in seperate function to support different languages
+        self.__board = Board(BOARD_ROW, BOARD_COL, ALPH_ENGLISH, SPECIAL_CELLS)
 
-        self.__order_counter: int = -1
-        self.__turn_count: int = 0
+        self.__turn_count: int =  -1
 
         self.__set_game_state(GameState.WAITING_FOR_PLAYERS)
+
+    def load_language(self) -> None:
+        pass
 
     def get_game_id(self) -> str:
         return self.__game_id
@@ -108,6 +110,12 @@ class Game:
 
     def get_first_player(self) -> Player:
         return None if self.__players.__len__() == 0 else self.__players[0]
+
+    def get_turn_count(self) -> int:
+        return self.__turn_count
+    
+    def reset_turn_count(self) -> None:
+        self.__turn_count = -1
 
     def is_all_players_ready(self) -> bool:
         if self.__players.__len__() == 0: return False
@@ -210,13 +218,14 @@ class Game:
                     if player.is_rack_empty():
                         player.initialize_rack(self.__tile_bag)
                 
+                self.reset_turn_count()
                 self.__currentPlayer = self.get_first_player()
                 self.__currentPlayer.set_player_state(PlayerState.PLAYING)
             
             iter = 0
             while self.__currentPlayer.get_player_state != PlayerState.PLAYING and iter < self.__player_count:
                 self.__currentPlayer.set_player_state(PlayerState.WAITING)
-                self.__currentPlayer = self.next_turn()  # Move to next player
+                self.next_turn()  # Move to next player
                 iter += 1
 
             self.__currentPlayer.set_player_state(PlayerState.PLAYING)
@@ -278,18 +287,22 @@ class Game:
     # @return The player who will play next
     ##
     def next_turn(self) -> Player:
-        self.__turn_count += 1
-        self.__order_counter = (self.__order_counter + 1) % self.__players.__len__()
-        return self.__players[self.__order_counter]
+        self.__turn_count = (self.__turn_count + 1) % self.__players.__len__()
+        self.__currentPlayer = self.__players[self.__turn_count]
+        return self.__currentPlayer
     
     ##
     # @brief Skip the turn of the current player
     # @return The player who will play next
     ##
-    def skip_turn(self) -> Player:
-        self.__turn_count += 1
-        self.__order_counter = (self.__order_counter + 1) % self.__players.__len__()
-        return self.__order_counter[self.__order_counter]
+    def skip_turn(self, player_id: str) -> Player:
+        player = self.found_player(player_id)
+        if player is None: return None
+        if not (player.get_player_state() == PlayerState.PLAYING): return None
+
+        self.__turn_count = (self.__turn_count + 1) % self.__players.__len__()
+        self.__currentPlayer = self.__players[self.__turn_count]
+        return self.__currentPlayer
     
     def check_game_over(self) -> bool:
         if (self.get_game_state() == GameState.GAME_OVER):

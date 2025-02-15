@@ -112,7 +112,7 @@ class Board:
     def __init__(self,
                  row=BOARD_ROW,
                  col=BOARD_COL, 
-                 tiles: Dict[str, Tuple[int, int]]=ENGLISH_TILES,
+                 tiles: ALPHABET=ALPH_ENGLISH,
                  special_cells: Dict[CL, CT]=SPECIAL_CELLS):
         self.__row: int = row
         self.__col: int = col
@@ -120,7 +120,7 @@ class Board:
         self.__special_cells = special_cells.copy()
         self.__tiles = tiles.copy()
 
-        #Dictionary(ENGLISH_TILES)
+        #Dictionary(ALPH_ENGLISH)
 
         self.clear()
 

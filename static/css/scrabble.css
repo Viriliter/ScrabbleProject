@@ -1,0 +1,238 @@
+/* Classes */
+.blocked {
+    pointer-events: none; /* Disables clicks */
+}
+.top-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 20px;
+}
+.bottom-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+}
+.game-board, .decorative-board{
+    display: grid;
+    grid-template-columns: repeat(17, var(--tile-size));
+    grid-template-rows: repeat(17, var(--tile-size));
+    gap: 3px; /* Space between cells */
+    border: 5px solid white; /* White grid lines */
+}
+.game-board {
+    position: relative;
+    z-index: 2; /* On top of the decorative board */
+}
+.decorative-board {
+    position: fixed;
+    z-index: 1; /* Behind the tiles board */
+}
+.leader-board {
+    display: grid;
+    width: 220px;
+    height: 300px;
+    gap: 10px;
+    background-color: var(--cell-color);
+    align-items: center;
+    align-content: baseline;
+    margin: 10px;
+    border-radius: 10px;
+}
+.leader-board-table {
+    display: grid;
+    grid-template-columns: repeat(1, 100%);
+    grid-template-rows: repeat(5, var(--tile-size));
+    row-gap: 10px;
+}
+.player-item {
+    width: auto;
+    height: 100%;
+    background-color: var(--background-color); /* Dark green background */
+    color: var(--text-color);
+    align-items: center;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    text-transform: uppercase;
+    column-gap: 10px;
+    border-radius: 10px;
+    margin: 10px;
+}
+.cell, .transparent-cell, .rack-cell, .header-cell {
+    display: flex;
+    width: var(--tile-size);
+    height: var(--tile-size);
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+}
+.cell {
+    font-size: 10px;
+    color: #000; /* Black text for all cells */
+    background-color: var(--cell-color);
+    border: 2px solid transparent;
+    box-sizing: border-box;
+}
+.transparent-cell {
+    font-size: 9px;
+    border: 2px solid transparent;
+    box-sizing: border-box;
+}
+.transparent-cell:hover {
+    border: 2px solid white;
+    cursor: pointer;
+}
+.double-letter {
+    background-color: #bad5f1; /* Light Blue */
+    color: #000000; /* Black text for better contrast */
+}
+.triple-letter {
+    background-color: #52a1e1; /* Dark Blue */
+    color: #000000; /* Black text for better contrast */
+}
+.double-word {
+    background-color: #e2bd46; /* Yellow */
+    color: #000000; /* Black text for better contrast */
+}
+.triple-word {
+    background-color: #d43322; /* Red */
+    color: #000000; /* Black text for better contrast */
+}
+.center-cell {
+    background-color: #e2bd46; /* Yellow */
+    font-size: 14px;
+}
+.header-cell {
+    background-color: var(--background-color);
+    color: white;
+    border: 2px solid transparent;
+}
+.header-cell:hover {
+    border: 2px solid transparent;
+}
+.rack-container {
+    display: flex;
+    width: 100%;
+    height: auto;
+    align-items: center;
+    background-color: var(--cell-color);
+    grid-template-columns: repeat(3, var(--tile-size));
+    grid-template-rows: repeat(1, var(--tile-size));
+    gap: 10px; /* Space between cells */
+    border-radius: 10px;
+    justify-content: space-evenly;
+}
+.rack {
+    display: grid;
+    z-index: 2;
+    justify-content: center;
+    align-items: center;
+    margin: 20px;
+    gap: 10px; /* Space between cells */
+    grid-template-columns: repeat(7, var(--tile-size));
+    grid-template-rows: repeat(1, var(--tile-size));
+    width: fit-content;
+    height: fit-content;
+}
+.rack-cell {
+    font-size: 9px;
+}
+.tile, .locked-tile {
+    display: flex;
+    position: relative;
+    width: var(--tile-size);
+    height: var(--tile-size);
+    z-index: 3; /* Behind the tiles board */
+    border-radius: 5px;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bold;
+    user-select: none; /* Disable text selection */
+}
+.tile {
+    background-color: #c6ae89;
+    box-sizing: border-box;
+    border: 2px solid transparent;
+    cursor: pointer;
+}
+.dragging-tile{
+    position: fixed;
+}
+.tile:hover {
+    background-color: #b98a43;
+    border: 2px solid white;
+}
+.tile:active {
+    background-color: #b88130;
+    border: 2px solid white;
+    font-weight: bolder;
+}
+.locked-tile {
+    margin: 0px;
+    background-color: #b88130;
+
+}
+.circular-button {
+    display: flex;
+    width: 40px;
+    height: 40px;
+    margin: 5px;
+    border-radius: 50%; /* Rounded button */
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+.rect-button {
+    display: flow-root;
+    width: 150px;
+    padding: 10px 20px;
+    background-color: #ADD8E6; /* Light blue background */
+    color: #00008B; /* Dark blue text */
+    border: 2px solid white; /* White border */
+    border-radius: 5px; /* Slightly rounded corners */
+    text-align: center;
+    font-weight: bold;
+    cursor: pointer;
+}
+.rect-button:hover {
+    background-color: #87CEEB; /* Slightly darker blue on hover */
+}
+dialog {
+    border: none;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+/* Style for overlay effect */
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.4);
+}
+/* Style for close button */
+.close-btn {
+    margin-top: 10px;
+    padding: 5px 10px;
+    border: none;
+    background-color: #ff4d4d;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.joker-tile-container {
+    display: grid;
+    z-index: 2;
+    justify-content: center;
+    align-items: center;
+    margin: 20px;
+    gap: 10px; /* Space between cells */
+    grid-template-columns: repeat(6, var(--tile-size));
+    grid-template-rows: repeat(4, var(--tile-size));
+    width: fit-content;
+    height: fit-content;
+}
