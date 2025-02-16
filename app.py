@@ -300,7 +300,14 @@ def request_rack(game_id: str, player_id: str) -> Response:
 def verify_word(game_id: str, player_id: str) -> Response:
     request_json = request.get_json()
 
+    if request_json is None:
+        return jsonify({"status": "error", "message": "Invalid request"}), 400
+
     tiles = request_json if isinstance(request_json, list) else []
+
+    if not game_id or not player_id or len(tiles) == 0:
+        return jsonify({"status": "error", "message": "Missing parameters"}), 400
+
     print(f'Word verifing for Player: {player_id}')
 
     # Print each tile's properties
@@ -310,11 +317,14 @@ def verify_word(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
     if game is not None:
         word = verbalize(tiles)
+        for tile in word:
+            print(f"Letter: {tile.letter}, row: {tile.row}, col: {tile.col}")
+
         calculated_points = game.verify_word(word)
         if calculated_points > 0:
             return jsonify({"status": "success", "points": calculated_points}), 200
         else:
-            return jsonify({"status": "error", "message": "Verification failed"}), 400
+            return jsonify({"status": "error", "message": "Verification failed"}), 200
     else:
         return jsonify({"status": "error", "message": "Game not found"}), 404
 
@@ -354,6 +364,7 @@ def skip_turn(game_id: str, player_id: str) -> Response:
 @app.route("/game/<game_id>/<player_id>/submit", methods=["POST"])
 def submit(game_id: str, player_id: str) -> Response:
     request_json = request.get_json()
+    print(f'Word submitted by Player: {player_id}')
 
     if request_json is None:
         return jsonify({"status": "error", "message": "Invalid request"}), 400
@@ -372,7 +383,7 @@ def submit(game_id: str, player_id: str) -> Response:
             if calculated_points > 0:
                 return jsonify({"status": "success", "points": calculated_points}), 200
             else:
-                return jsonify({"status": "error", "message": "Word cannot be submitted"}), 400
+                return jsonify({"status": "error", "message": "Word cannot be submitted"}), 200
         else:
             return jsonify({"status": "error", "message": "Player not found"}), 404
     else:

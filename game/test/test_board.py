@@ -9,6 +9,7 @@ class TestBoard(unittest.TestCase):
     def setUp(self):
         language = LANGUAGES['ENG']
         self.dict = DictionaryWrapper(language)
+
     @measure_time
     def test_serialize_words_horizontal(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)

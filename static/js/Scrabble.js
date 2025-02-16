@@ -124,6 +124,8 @@ function mouseUpHandler(event) {
             scrabbleRack.appendChild(returnTile);
 
             removeSelectedTile(tileID);
+            verifyWord(selectedTiles);
+
         } else if (checkBoardZone(dropTarget)) {  // Check if the drop target is a valid cell on the game board
             console.log('Tile placed successfully');
 
@@ -154,6 +156,8 @@ function mouseUpHandler(event) {
             parentNode.removeChild(tile);
 
             removeSelectedTile(tileID);
+            verifyWord(selectedTiles);
+
         } else {  // If not a valid drop, return the tile to the rack
             console.log('Invalid drop location. Returning tile to rack.');
 
@@ -167,6 +171,7 @@ function mouseUpHandler(event) {
             scrabbleRack.appendChild(returnTile);
 
             removeSelectedTile(tileID);
+            verifyWord(selectedTiles);
         }
 
         tile.classList.remove('dragging-tile'); // Remove dragging-tile class
@@ -198,9 +203,13 @@ function removeSelectedTile(tileID) {
 }
 
 function verifyWord(tiles) {
+    if (!tiles || tiles.length === 0) {
+        return;
+    }
+
     tiles.forEach((letter, tileID, location) => {
         console.log(letter, tileID, location);
-    }); 
+    });
 
     const tilesJson = JSON.stringify(tiles);
 
@@ -218,12 +227,14 @@ function verifyWord(tiles) {
             if (data.points>0) {
                 updateTentativePoints(data.points)
             } else {
+                updateTentativePoints(0);  // This will clear tentative points
             }
         } else {
+            updateTentativePoints(0);  // This will clear tentative points
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Unknown Error:', error);
     });
 }
 
@@ -243,11 +254,11 @@ function fetchPlayerName(playerID) {
                 myPlayer = new Player(playerID, data.playerName);
             }
         } else {
-            alert('Unknown error: ' + data.message);
+            alert('Error: ' + data.message);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Unknown Error:', error);
     });
 }
 
@@ -300,7 +311,7 @@ function quitGame() {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Unknown Error:', error);
         return false;
     });
 }
@@ -332,11 +343,11 @@ function requestOrder() {
                 orderTileDiv.style.visibility = 'collapse';
             }
         } else {
-            alert('Unknown error: ' + data.message);
+            alert('Error: ' + data.message);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Unknown Error:', error);
     });
 }
 
@@ -355,11 +366,11 @@ function requestRack() {
                 updateMyRack(data.rack);
             }
         } else {
-            alert('Unknown error: ' + data.message);
+            alert('Error: ' + data.message);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Unknown Error:', error);
     });
 }
 
@@ -377,6 +388,8 @@ function revertTiles() {
 
         // Remove the 'placed-tile' class to reset the tile state
         tile.classList.remove('placed-tile');
+
+        updateTentativePoints(0);  // This will clear tentative points
     });
 
     selectedTiles = [];
@@ -414,7 +427,7 @@ function skipTurn() {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Unknown Error:', error);
     });
 }
 
@@ -438,15 +451,17 @@ function submitWord(tiles=[]) {
             // Update the points box with the calculated points
             if (data.points>0) {
                 document.getElementById('myPlayerPoints').textContent = data.points;
+                updateTentativePoints(0);  // This will clear tentative points
             } else {
                 alert('Word verification failed!');
             }
         } else {
-            alert('Unknown error: ' + data.message);
+            updateTentativePoints(0);  // This will clear tentative points
+            alert('Error: ' + data.message);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Unknown Error:', error);
     });
 }
 
@@ -463,11 +478,11 @@ function swapLetter() {
         if (data.status === 'success') {
 
         } else {
-            alert('Unknown error: ' + data.message);
+            alert('Error: ' + data.message);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Unknown Error:', error);
     });
 }
 

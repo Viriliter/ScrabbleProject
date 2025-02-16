@@ -31,8 +31,8 @@ def verbalize(tiles: List[Tuple[LETTER, str, str]]) -> WORD:
             return None  # Invalid format
 
         col_str, row_str = match.groups()
-        c = sum((ord(char) - ord('A') + 1) * (26 ** i) for i, char in enumerate(reversed(col_str)))  # Convert 'A' -> 1, 'B' -> 2, ..., 'AA' -> 27
-        r = int(row_str)
+        c = sum((ord(char) - ord('A')) * (26 ** i) for i, char in enumerate(reversed(col_str)))  # Convert 'A' -> 1, 'B' -> 2, ..., 'AA' -> 27
+        r = int(row_str) - 1
         
         letter = TILE(r, c, letter)
         word.append(letter)

@@ -1,29 +1,28 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, final
 from dataclasses import dataclass
 
 # Cell Location
 class CL:
-    def __init__(self, row, col):
+    def __init__(self, row: int, col: int):
         self._row = row
         self._col = col
 
     @property
-    def row(self):
+    def row(self) -> int:
         return self._row
 
     @row.setter
-    def row(self, value):
+    def row(self, value: int):
         if not isinstance(value, int) or value < 0:
             raise ValueError("Row must be a non-negative integer")
         self._row = value
 
     @property
-    def col(self):
-        """Column property (getter)"""
+    def col(self) -> int:
         return self._col
 
     @col.setter
-    def col(self, value):
+    def col(self, value: int) -> None:
         if not isinstance(value, int) or value < 0:
             raise ValueError("Column must be a non-negative integer")
         self._col = value
@@ -34,8 +33,12 @@ class CL:
     def __eq__(self, other):
         return isinstance(other, CL) and self.row == other.row and self.col == other.col
     
-    def __str__(self):
-        return f'{chr(65 + self._col - 1)}{self._row}'
+    def __str__(self) -> str:
+        return f'{chr(65 + self._col)}{self._row+1}'
+
+    def __iter__(self):
+        for key in self.__dict__:
+            yield key, getattr(self, key)
 
 # Cell Type
 class CT:
@@ -113,11 +116,61 @@ SPECIAL_CELLS: Dict[CL, CT] = {
 # Define LETTER as string to represent single character
 LETTER = str
 
-@dataclass(frozen=True)
+@final
 class TILE:
-    row: int
-    col: int
-    letter: LETTER
+    def __init__(self, row: int, col: int, letter: str, is_blank=False, score=0):
+        self._row = row
+        self._col = col
+        self._letter = letter
+        self._is_blank = is_blank
+        self._score = score
+
+    @property
+    def row(self) -> int:
+        return self._row
+
+    @row.setter
+    def row(self, row: int) -> None:
+        self._row = row
+    
+    @property
+    def col(self) -> int:
+        return self._col
+
+    @col.setter
+    def col(self, col: int) -> None:
+        self._col = col
+    
+    @property
+    def letter(self) -> str:
+        return self._letter
+
+    @letter.setter
+    def letter(self, letter: str) -> None:
+        self._letter = letter
+    
+    @property
+    def is_blank(self) -> bool:
+        return self._is_blank
+
+    @is_blank.setter
+    def is_blank(self, is_blank: bool) -> None:
+        self._is_blank = is_blank
+
+    @property
+    def score(self) -> int:
+        return self._score
+
+    @score.setter
+    def score(self, score: int) -> None:
+        self._score = score
+
+    def __iter__(self):
+        for key in self.__dict__:
+            yield key, getattr(self, key)
+
+    def __str__(self) -> str:
+        return f'({self.row},{self.col},{self.letter})'
 
 # Define WORD as a list of TILEs
 WORD = List[TILE]

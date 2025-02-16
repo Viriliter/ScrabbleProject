@@ -32,7 +32,7 @@
 }
 .leader-board {
     display: grid;
-    width: 220px;
+    width: auto;
     height: 300px;
     gap: 10px;
     background-color: var(--cell-color);

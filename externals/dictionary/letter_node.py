@@ -161,10 +161,9 @@ class LetterNode:
     def match(self, chars: str, index: int) -> Optional['LetterNode']:
         """
         @brief Find the letter node at the end of the subtree that matches
-        the last character in chars, even if it"s not isEndOfWord
+        the last character in chars, even if it's not isEndOfWord
         
-        @param chars: a string of characters that may
-        be the root of a word
+        @param chars: a string of characters that may be the root of a word
         @param index: index into chars
         @return: node found, or undefined
         """
@@ -206,8 +205,7 @@ class LetterNode:
         @param chars: The available set of characters.
         @param real_word: The string built so far in this recursion.
         @param blanked_word: The string built using spaces for blanks (if they are used).
-        @return: A dictionary of found words, with the real word as the key
-                 and the word with blanks as the value.
+        @return: A dictionary of found words, with the real word as the key and the word with blanks as the value.
         """
         node: LetterNode = self
 

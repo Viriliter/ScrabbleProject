@@ -263,15 +263,15 @@ class Game:
 
     def submit(self, player_id: str, word: WORD) -> int:
         if self.__game_state != GameState.GAME_STARTED:
-            return
+            return 0
         
         player = self.found_player(player_id)
         if player is None:
-            return
+            return 0
 
         # Only current player submit its word
         if not (player.get_player_id() == self.__currentPlayer.get_player_id()):
-            return
+            return 0
 
         points = self.verify_word(word)
 
@@ -288,6 +288,7 @@ class Game:
                 newLetter = self.__tile_bag.get_random_letter()
                 player.add_to_rack(newLetter)
 
+            self.next_turn()
             self.update()
 
         return points

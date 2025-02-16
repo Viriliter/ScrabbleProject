@@ -93,6 +93,8 @@ class Dictionary:
         @param chars: a word to check
         @return: true if the word is found, false otherwise
         """
+        if not isinstance(chars, str): raise ValueError("chars is not string!")
+        
         m = self.root.match(chars, 0) if self.root is not None else None
         return m is not None and m.isEndOfWord
 
