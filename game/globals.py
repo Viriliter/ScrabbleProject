@@ -118,12 +118,12 @@ LETTER = str
 
 @final
 class TILE:
-    def __init__(self, row: int, col: int, letter: str, is_blank=False, score=0):
+    def __init__(self, row: int, col: int, letter: str, point=-1, is_blank=False):
         self._row = row
         self._col = col
         self._letter = letter
         self._is_blank = is_blank
-        self._score = score
+        self._point = point
 
     @property
     def row(self) -> int:
@@ -158,12 +158,12 @@ class TILE:
         self._is_blank = is_blank
 
     @property
-    def score(self) -> int:
-        return self._score
+    def point(self) -> int:
+        return self._point
 
-    @score.setter
-    def score(self, score: int) -> None:
-        self._score = score
+    @point.setter
+    def point(self, point: int) -> None:
+        self._point = point
 
     def __iter__(self):
         for key in self.__dict__:

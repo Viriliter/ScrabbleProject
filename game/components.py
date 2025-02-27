@@ -4,6 +4,7 @@ import copy
 from io import BytesIO
 from typing import List, Dict, Tuple, Optional
 from deprecated import deprecated
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -131,6 +132,13 @@ class DictionaryWrapper:
     def get_alphabet(self) -> ALPHABET:
         return self.__alphabet
 
+@dataclass(frozen=True)
+class Neighbors:
+    up:     Tuple[int, int]
+    right:  Tuple[int, int]
+    down:   Tuple[int, int]
+    left:   Tuple[int, int]
+
 class BoardContainer(np.ndarray):
     def __new__(cls, rows: int, cols: int, default_value: Optional[TILE]=None):
         obj = super().__new__(cls, shape=(rows, cols), dtype=object)
@@ -174,6 +182,30 @@ class BoardContainer(np.ndarray):
         if col < 0 or col > self.cols:
             return False
         return True
+
+    def has_neighbor(self, row: int, col: int) -> Neighbors:
+        """
+        Check if the cell has any neighbors and returns its neighbors
+        """
+        neighbors: Neighbors = None
+        if row > 0 and not self.is_empty(row - 1, col):
+            neighbors.up = (row - 1, col)
+        else:
+            neighbors.up = None
+        if row < self.rows - 1 and not self.is_empty(row + 1, col):
+            neighbors.down = (row + 1, col)
+        else:
+            neighbors.down = None
+        if col > 0 and not self.is_empty(row, col - 1):
+            neighbors.left = (row, col-1)
+        else:
+            neighbors.left = None
+        if col < self.cols - 1 and not self.is_empty(row, col + 1):
+            neighbors.right = (row + 1, col+1)
+        else:
+            neighbors.right = None
+        return neighbors
+
 
     def clear(self) -> None:
         self.fill(None)
@@ -270,9 +302,9 @@ class Board:
             return new_word
 
         # Check horizontal word formation
-        if not len(rows.items()) == len(word):
+        if len(cols.items()) == len(word) and len(rows.items()) == 1:
             for row, tiles in rows.items():
-                sorted_tiles = sorted(tiles, key=lambda x: x.col)
+                sorted_tiles = sorted(tiles, key=lambda x: x.col)  # Sort by column
                 completed_tiles = complete_word(sorted_tiles, Board.Direction.Horizontal)
                 if completed_tiles and all(completed_tiles[i].col == completed_tiles[i - 1].col + 1 for i in range(1, len(completed_tiles))):
                     serialized_word = ''.join(tile.letter for tile in completed_tiles)
@@ -280,9 +312,9 @@ class Board:
                     return serialized_word
 
         # Check vertical word formation
-        if not len(cols.items()) == len(word):
+        if len(rows.items()) == len(word) and len(cols.items()) == 1:
             for col, tiles in cols.items():
-                sorted_tiles = sorted(tiles, key=lambda x: x.row)
+                sorted_tiles = sorted(tiles, key=lambda x: x.row)  # Sort by row
                 completed_tiles = complete_word(sorted_tiles, Board.Direction.Vertical)
                 if completed_tiles and all(completed_tiles[i].row == completed_tiles[i - 1].row + 1 for i in range(1, len(completed_tiles))):
                     serialized_word = ''.join(tile.letter for tile in completed_tiles)
@@ -377,12 +409,14 @@ class Board:
             cols.setdefault(tile.col, []).append(tile)
         
         # Check word is horizontal
-        if not len(rows.items()) == len(word):
+        if len(cols.items()) == len(word) and len(rows.items()) == 1:
             sorted_ = sorted(word, key=lambda x: x.col, reverse=False)
             r_sorted = sorted(word, key=lambda x: x.col, reverse=True)
 
             o_words: List[Dict[str, int]] = []
+            print(f"r_sorted[0].row, r_sorted[0].col: {r_sorted[0].row}, {r_sorted[0].col}")
             score = self.score_play(r_sorted[0].row, r_sorted[0].col, 0, 1, sorted_, o_words)
+            print(f"Horizontal Score: {score} words : {o_words}")
             # Check all founded words are valid
             flag = True
             for t_word in o_words:
@@ -391,12 +425,13 @@ class Board:
             return score if flag else 0
 
         # Check word is vertical
-        if not len(cols.items()) == len(word):
+        if len(rows.items()) == len(word) and len(cols.items()) == 1:
             sorted_ = sorted(word, key=lambda x: x.row, reverse=False)
             r_sorted = sorted(word, key=lambda x: x.row, reverse=True)
 
             o_words: List[Dict[str, int]] = []
             score = self.score_play(r_sorted[0].row, r_sorted[0].col, 1, 0, sorted_, o_words)
+            print(f"Vertical Score: {score} words : {o_words}")
             # Check all founded words are valid
             flag = True
             for t_word in o_words:
@@ -474,7 +509,7 @@ class Board:
                 # Letter played from the rack
                 rack_tile = next((l for l in shrunk_rack if l.letter == letter), None) or \
                             next((l for l in shrunk_rack if l.is_blank), None)
-                word_so_far.append(TILE(row=erow, col=ecol, letter=letter, is_blank=rack_tile.is_blank, score=rack_tile.score))
+                word_so_far.append(TILE(row=erow, col=ecol, letter=letter, point=rack_tile.point, is_blank=rack_tile.is_blank))
                 shrunk_rack = [t for t in shrunk_rack if t != rack_tile]
             else:
                 word_so_far.append(self.__cells.at(erow, ecol))
@@ -517,7 +552,7 @@ class Board:
             if played_tile > 0:
                 # Letter came from the rack
                 tile = next((l for l in shrunk_rack if l.letter == letter), None) or next((l for l in shrunk_rack if l.is_blank), None)
-                word_so_far.insert(0, TILE(row=erow, col=ecol, letter=letter, is_blank=tile.is_blank, score=tile.score))
+                word_so_far.insert(0, TILE(row=erow, col=ecol, letter=letter, point=tile.point, is_blank=tile.is_blank))
                 shrunk_rack = [t for t in shrunk_rack if t != tile]
             else:
                 # Letter already on the board
@@ -619,16 +654,19 @@ class Board:
         word_multiplier = 1
         alphabet: ALPHABET = self.__dictionary.get_alphabet()
 
-        c, r = col - dcol * len(tiles), row - drow * len(tiles)
+        # One behind first tile offset
+        c = col - dcol * len(tiles)
+        r = row - drow * len(tiles)
 
         for tile in tiles:
             r += drow
             c += dcol
             cell_type = self.__special_cells.get(CL(r, c), CT.ORDINARY)
             lm, wm = Board.get_bonus(cell_type)
-            tile_score = alphabet[tile.letter][1]
+            tile_score = alphabet[tile.letter][1] if tile.point <0 else tile.point
 
             if not self.__cells.is_empty(r, c):
+                print(f"Cell is not empty {r}, {c}")
                 word_score += tile_score
                 continue  
             
@@ -639,25 +677,30 @@ class Board:
             cross_word = ""
             cross_word_score = 0
 
-            cp, rp = c - drow, r - dcol
-            while self.__cells.is_within_bounds(rp, cp) and not self.__cells.is_empty(rp, cp):
+            # Look left/up
+            cp = c - drow
+            rp = r - dcol
+            while cp >= 0 and rp >= 0 and not self.__cells.is_empty(rp, cp):
                 cross_letter = self.__cells.at(rp, cp).letter
                 cross_word = cross_letter + cross_word
                 cross_word_score += alphabet[cross_letter][1]  # Add score of cross tile
-                rp -= dcol
                 cp -= drow
+                rp -= dcol
 
             cross_word += tile.letter
 
-            cp, rp = c + drow, r + dcol
-            while self.__cells.is_within_bounds(rp, cp) and not self.__cells.is_empty(rp, cp):
+            # Look right/down
+            cp = c + drow
+            rp = r + dcol
+            while cp < self.__cells.cols and rp < self.__cells.rows and not self.__cells.is_empty(rp, cp):
                 cross_letter = self.__cells.at(rp, cp).letter
                 cross_word += cross_letter
                 cross_word_score += alphabet[cross_letter][1]  # Add score of cross tile
-                rp += dcol
                 cp += drow
+                rp += dcol
 
             if cross_word_score > 0:
+                # This tile (and bonuses) contribute to cross words
                 cross_word_score += letter_score
                 cross_word_score *= wm
                 if words is not None:
