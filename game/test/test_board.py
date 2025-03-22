@@ -148,8 +148,9 @@ class TestBoard(unittest.TestCase):
 
         for expected, (word, exp_score) in word_list.items():
             points = board.calculate_points(word)
-            self.assertEqual(points, exp_score, f"Failed for word: {expected}")
             board.place_word(word)
+            board.print()
+            self.assertEqual(points, exp_score, f"Failed for word: {expected}")
 
 if __name__ == '__main__':
     unittest.main()

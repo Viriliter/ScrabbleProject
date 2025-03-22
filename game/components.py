@@ -713,3 +713,42 @@ class Board:
             words.append({"word": "".join(tile.letter for tile in tiles), "score": word_score})
 
         return word_score + cross_words_score
+
+    def print(self):
+        # Get the number of rows and columns
+        rows = self.__cells.rows
+        cols = self.__cells.cols
+        
+        # Generate column headers (A, B, C, ...)
+        column_headers = string.ascii_uppercase[:cols]
+        
+        # Create a 2D grid representation of the board
+        board = [["." for _ in range(cols)] for _ in range(rows)]
+        
+        # Populate the board with the current letters
+        for r in range(rows):
+            for c in range(cols):
+                if not self.__cells.is_empty(r, c):
+                    # If the cell is not empty, get the letter and place it on the board
+                    board[r][c] = self.__cells.at(r, c).letter
+        
+        # Print the column headers
+        print("     " + "  ".join(column_headers))
+
+        # Print the top border
+        print("   +-" + "---" * cols + "+")
+        
+        # Print the board with row numbering
+        for r in range(rows):
+            # Print the row number (aligned with two spaces for better formatting)
+            print(f"{r+1:2} |", end=" ")
+            
+            # Print the row contents
+            for c in range(cols):
+                print(f"{board[r][c]} ", end=" ")
+            
+            # Print the right border
+            print("|")
+
+        # Print the bottom border
+        print("   +-" + "---" * cols + "+")
