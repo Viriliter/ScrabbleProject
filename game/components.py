@@ -125,7 +125,7 @@ class DictionaryWrapper:
         if len(word) == 0: return False
         return True if self.__dic.has_sequence(word) else False
 
-    def get_sequence(self, word: str) -> Optional[List[str]]:
+    def get_sequence_roots(self, word: str) -> Optional[List[str]]:
         if len(word) == 0: return None
         return self.__dic.get_sequence_roots(word) if self.__dic.has_sequence(word) else None
 
@@ -164,6 +164,14 @@ class BoardContainer(np.ndarray):
     @property
     def cols(self) -> int:
         return self.shape[1]
+
+    @property
+    def midrow(self) -> int:
+        return self.shape[0] / 2
+
+    @property
+    def midcol(self) -> int:
+        return self.shape[1] / 2
 
     def at(self, row: int, col: int) -> Optional[TILE]:
         return self[row, col]
@@ -206,7 +214,6 @@ class BoardContainer(np.ndarray):
             neighbors.right = None
         return neighbors
 
-
     def clear(self) -> None:
         self.fill(None)
 
@@ -222,6 +229,7 @@ class Board:
     class Direction:
         Vertical = 0
         Horizontal = 1
+        Undefined = 2
 
     def __init__(self,
                  dictionary: DictionaryWrapper,
@@ -239,6 +247,17 @@ class Board:
 
 
         self.clear()
+
+    @property
+    def rows(self):
+        return self.__cells.rows
+
+    @property
+    def cols(self):
+        return self.__cells.cols
+
+    def at(self, row: int, col: int) -> Optional[TILE]:
+        return self.__cells.at(row, col)
 
     def check_boundary(self, tile: TILE) -> bool:
         # Check if the row and column are within bounds of board
@@ -392,30 +411,15 @@ class Board:
             return (1, 1)
 
     def calculate_points(self, word: WORD) -> int:
-        for tile in word:
-            if not self.check_boundary(tile): return 0
-            if not self.__cells.is_empty(tile.row, tile.col): return 0
-
-        for tile in word:
-            print(f"Letter2: {tile.letter}, row2: {tile.row}, col2: {tile.col}")
-
-        rows: Dict[int, WORD] = {}
-        cols: Dict[int, WORD] = {}
+        direction = self.find_word_direction(word)
         
-        score = 0
-
-        for tile in word:
-            rows.setdefault(tile.row, []).append(tile)
-            cols.setdefault(tile.col, []).append(tile)
-        
-        # Check word is horizontal
-        if len(cols.items()) == len(word) and len(rows.items()) == 1:
+        if (direction == Board.Direction.Horizontal):
             sorted_ = sorted(word, key=lambda x: x.col, reverse=False)
-            r_sorted = sorted(word, key=lambda x: x.col, reverse=True)
 
             o_words: List[Dict[str, int]] = []
-            print(f"r_sorted[0].row, r_sorted[0].col: {r_sorted[0].row}, {r_sorted[0].col}")
-            score = self.score_play(r_sorted[0].row, r_sorted[0].col, 0, 1, sorted_, o_words)
+            completed_word = self.complete_word(sorted_[0].row, sorted_[0].col, 0, 1, sorted_)
+            
+            score = self.score_play(completed_word[-1].row, completed_word[-1].col, 0, 1, completed_word, o_words)
             print(f"Horizontal Score: {score} words : {o_words}")
             # Check all founded words are valid
             flag = True
@@ -423,14 +427,12 @@ class Board:
                 flag &= self.__dictionary.has_word(t_word['word'])
 
             return score if flag else 0
-
-        # Check word is vertical
-        if len(rows.items()) == len(word) and len(cols.items()) == 1:
+        elif (direction == Board.Direction.Vertical):
             sorted_ = sorted(word, key=lambda x: x.row, reverse=False)
-            r_sorted = sorted(word, key=lambda x: x.row, reverse=True)
 
             o_words: List[Dict[str, int]] = []
-            score = self.score_play(r_sorted[0].row, r_sorted[0].col, 1, 0, sorted_, o_words)
+            completed_word = self.complete_word(sorted_[0].row, sorted_[0].col, 1, 0, sorted_)
+            score = self.score_play(completed_word[-1].row, completed_word[-1].col, 1, 0, completed_word, o_words)
             print(f"Vertical Score: {score} words : {o_words}")
             # Check all founded words are valid
             flag = True
@@ -438,8 +440,8 @@ class Board:
                 flag &= self.__dictionary.has_word(t_word['word'])
 
             return score if flag else 0
-
-        return score
+        else:  # Undefined direction
+            return 0
 
     def clear(self) -> None:
         self.__cells.clear()
@@ -451,17 +453,17 @@ class Board:
     def intersection(a: List[str], b: List[str]) -> List[str]:
         return [letter for letter in a if letter in b]
 
-    def is_anchor(self, row: int, col: int) -> bool:
-        if self.__cells.is_empty(row, col):
-            return False
-
-        # Check if any adjacent cell is empty
-        left_empty = col > 0 and self.__cells.is_empty(row, col - 1)
-        right_empty = col < self.__cells.cols - 1 and self.__cells.is_empty(row, col + 1)
-        top_empty = row > 0 and self.__cells.is_empty(row - 1, col)
-        bottom_empty = row < self.__cells.rows - 1 and self.__cells.is_empty(row + 1, col)
-
-        return left_empty or right_empty or top_empty or bottom_empty
+    def is_anchor(self, row, col):
+        """
+        Unlike Appel and Jacobsen, who anchor plays on empty squares,
+        we anchor plays on a square with a tile that has an adjacent
+        (horizontal or vertical) non-empty square.
+        """
+        return (not self.__cells.is_empty(row, col) and
+                ((col > 0 and self.__cells.is_empty(row, col-1)) or
+                (col < self.__cells.cols - 1 and self.__cells.is_empty(row, col+1)) or
+                (row > 0 and self.__cells.is_empty(row-1, col)) or
+                (row < self.__cells.rows - 1 and self.__cells.is_empty(row+1, col))))
 
     def _forward(self, row: int, col: int, drow: int, dcol: int, 
                 rack_tiles: WORD, tiles_played: int, d_node: LetterNode, word_so_far: WORD):
@@ -572,7 +574,7 @@ class Board:
             self._forward(row + drow * (len(word_so_far) - 1), col + dcol * (len(word_so_far) - 1), drow, dcol,
                     rack_tiles, tiles_played, anchor_node, word_so_far)
 
-    def compute_cross_checks(self, available) -> None:
+    def compute_cross_checks(self, available: List[str]) -> None:
         xChecks = []
         for col in range(self.__cells.cols):
             this_col = []
@@ -752,3 +754,91 @@ class Board:
 
         # Print the bottom border
         print("   +-" + "---" * cols + "+")
+
+    def find_word_direction(self, word: WORD) -> Direction:
+        rows: Dict[int, WORD] = {}
+        cols: Dict[int, WORD] = {}
+
+        # Add tiles according to their row and indexes
+        for tile in word:
+            rows.setdefault(tile.row, []).append(tile)
+            cols.setdefault(tile.col, []).append(tile)
+        
+        # If length of the word is 1, then we need to look its around to understand its direction
+        if len(word) == 1:
+            # Look upwards
+            if not self.__cells.is_empty(word[0].row+1, word[0].col):
+                return Board.Direction.Vertical
+
+            # Look downwards
+            if not self.__cells.is_empty(word[0].row-1, word[0].col):
+                return Board.Direction.Vertical
+
+            # Look left
+            if not self.__cells.is_empty(word[0].row, word[0].col-1):
+                return Board.Direction.Horizontal
+
+            # Look right
+            if not self.__cells.is_empty(word[0].row, word[0].col+1):
+                return Board.Direction.Horizontal
+
+        if len(cols.items()) == len(word) and len(rows.items()) == 1:
+            return Board.Direction.Horizontal
+
+        if len(rows.items()) == len(word) and len(cols.items()) == 1:
+            return Board.Direction.Vertical
+
+        return Board.Direction.Undefined
+
+    def complete_word(self, row: int, col: int, drow: int, dcol: int, word: WORD) -> WORD:
+        """
+        @brief Completes a word by finding missing letters from the board.
+
+        @param row: the row of the LAST letter
+        @param col: the col of the LAST letter
+        @param drow: 1 if the word is being played down
+        @param dcol: 1 if the word being played across
+        @param word: List of TILE objects representing the known word part.
+        @return: Completed list of TILE objects forming the full word.
+        """
+        frow = row-drow  # Move left of the first letter
+        fcol = col-dcol  # Move up of the first letter
+
+        completed_word: List[TILE] = copy.deepcopy(word)
+
+        # Move left or up, to find index of first letter in the word
+        while(frow>=0 and fcol>=0):
+            if self.__cells.is_empty(frow, fcol):
+                frow += drow
+                fcol += dcol
+                break
+
+            completed_word.insert(0, TILE(frow, fcol, self.__cells.at(frow, fcol).letter))
+            frow -= drow
+            fcol -= dcol
+
+        if drow==1:  # Vertical word
+            completed_word = sorted(completed_word, key=lambda x: x.col, reverse=True)
+        else:  # Horizontal word
+            completed_word = sorted(completed_word, key=lambda x: x.row, reverse=True)
+
+        i = 0  # index to insert new letters 
+        while (frow < self.__cells.rows and fcol < self.__cells.cols):
+            if (i >= len(completed_word)):
+                tile = self.__cells.at(frow, fcol)
+                if tile is None:
+                    return completed_word
+                completed_word.insert(i, tile)
+            else:
+                if not(completed_word[i].row == frow and completed_word[i].col == fcol):
+                    tile = self.__cells.at(frow, fcol)
+                    if tile is None:
+                        return completed_word
+                    completed_word.insert(i, tile)
+                i += 1
+            
+            frow += drow
+            fcol += dcol
+
+        return completed_word
+

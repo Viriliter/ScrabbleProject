@@ -194,7 +194,7 @@ MIN_PLAYER_COUNT: int = 2
 
 AI_PLAYER_NAMES = ["Socrates", "Plato", "Aristotle", "Marx"]
 
-# Letter: (Points, Count)
+# Letter: (Count, Points)
 ALPH_ENGLISH: ALPHABET = {
     'A': (9, 1),
     'B': (2, 3),
