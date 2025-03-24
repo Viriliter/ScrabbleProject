@@ -185,6 +185,14 @@ class TILE:
     def __repr__(self) -> str:
         return self.__str__()
     
+    def __eq__(self, other):
+        if isinstance(other, TILE):
+            return self.letter == other.letter
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
 # Define WORD as a list of TILEs
 WORD = List[TILE]
 
@@ -307,5 +315,5 @@ class LANG_KEYS:
     ENG = "ENG"
     TUR = "TUR"
 
-LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "dictionaries/CSW2021_English.dict"),
+LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "dictionaries/Oxford_5000.dict"),
                                         LANG_KEYS.TUR: LANGUAGE(ALPH_TURKISH, "dictionaries/British_English.dict")}

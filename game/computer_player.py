@@ -95,8 +95,7 @@ class ComputerPlayer(Player):
                         available = dictionary.get_all_letters() if any(t.is_blank for t in rack_tiles) else [t.letter for t in rack_tiles]
                         self._board.compute_cross_checks(available)
                         anchored = True
-                    if row==3 and col==7:
-                        pass
+
                     anchor_tile = self._board.at(row, col)
 
                     roots = dictionary.get_sequence_roots(anchor_tile.letter)
@@ -105,13 +104,15 @@ class ComputerPlayer(Player):
                         self._board.back(row, col, 0, 1,
                                          rack_tiles, 0,
                                          anchor_node, anchor_node,
-                                         [ anchor_tile ], best_score, best_word)
+                                         [ anchor_tile ])
 
                         # down
                         self._board.back(row, col, 1, 0,
                                          rack_tiles, 0,
                                          anchor_node, anchor_node,
-                                         [ anchor_tile ], best_score, best_word)
+                                         [ anchor_tile ])
+
+        return self._board.get_best_move()
 
         if not anchored:
             best_score, best_word = self.best_opening_play(rack_tiles)
