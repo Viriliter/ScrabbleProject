@@ -80,7 +80,7 @@ class LetterNode:
             if node.child:
                 node.child.each_long_word(s + node.letter, cb)
             elif node.isEndOfWord:
-                cb(s + node.letter, node)
+                cb(s + node.letter)
             node = node.next
 
     def each_node(self, cb: callable) -> bool:
@@ -267,3 +267,6 @@ class LetterNode:
         if ((numb >> LetterNode.CHILD_INDEX_SHIFT) & LetterNode.CHILD_INDEX_BIT_MASK) > 0:
             self.child = (numb >> LetterNode.CHILD_INDEX_SHIFT) & LetterNode.CHILD_INDEX_BIT_MASK
         return self
+
+    def __str__(self) -> str:
+        return f'{self.letter}'

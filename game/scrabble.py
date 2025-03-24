@@ -3,6 +3,9 @@ from flask_socketio import SocketIO, emit
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
+from game.computer_player import ComputerPlayer
+from game.human_player import HumanPlayer
+
 from .globals import *
 from .utils import *
 from .player import *
@@ -69,7 +72,12 @@ class Game:
         if (self.__active_player_count >= self.__player_count):
             return -1
         
-        player = Player(self.__board, player_type)
+        if player_type == PlayerType.HUMAN:
+            player = HumanPlayer(self.__board)
+        elif player_type == PlayerType.COMPUTER:
+            player = ComputerPlayer(self.__board)
+        else:
+            return -1
 
         if not (player_type == PlayerPrivileges.REFEREE):
             self.__players.append(player)
@@ -230,6 +238,9 @@ class Game:
                 self.reset_turn_count()
                 self.__currentPlayer = self.get_first_player()
                 self.__currentPlayer.set_player_state(PlayerState.PLAYING)
+                if (self.__currentPlayer.get_player_type() == PlayerType.COMPUTER):
+                    score, tiles = self.__currentPlayer.play_turn()
+                    self.submit(self.__currentPlayer.get_player_name(), tiles)
             
             iter = 0
             while self.__currentPlayer.get_player_state != PlayerState.PLAYING and iter < self.__player_count:
@@ -238,6 +249,9 @@ class Game:
                 iter += 1
 
             self.__currentPlayer.set_player_state(PlayerState.PLAYING)
+            if (self.__currentPlayer.get_player_type() == PlayerType.COMPUTER):
+                score, tiles = self.__currentPlayer.play_turn()
+                self.submit(self.__currentPlayer.get_player_name(), tiles)
         
     def __on_game_over(self):
         pass

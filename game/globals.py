@@ -1,3 +1,4 @@
+import copy
 from typing import List, Dict, Tuple, final
 from dataclasses import dataclass
 
@@ -118,11 +119,12 @@ LETTER = str
 
 @final
 class TILE:
-    def __init__(self, row: int, col: int, letter: str, point=-1, is_blank=False):
+    def __init__(self, row: int, col: int, letter: str, point=-1, is_blank=False, is_locked=False):
         self._row = row
         self._col = col
         self._letter = letter
         self._is_blank = is_blank
+        self._is_locked = is_locked
         self._point = point
 
     @property
@@ -158,6 +160,14 @@ class TILE:
         self._is_blank = is_blank
 
     @property
+    def is_locked(self) -> bool:
+        return self._is_locked
+
+    @is_locked.setter
+    def is_locked(self, is_locked: bool) -> None:
+        self._is_locked = is_locked
+
+    @property
     def point(self) -> int:
         return self._point
 
@@ -171,9 +181,47 @@ class TILE:
 
     def __str__(self) -> str:
         return f'({self.row},{self.col},{self.letter})'
-
+    
+    def __repr__(self) -> str:
+        return self.__str__()
+    
 # Define WORD as a list of TILEs
 WORD = List[TILE]
+
+BLANK_LETTER: str = " "
+
+def PRINT_WORD(word: WORD) -> None:
+    temp_word: WORD = copy.deepcopy(word)
+    if (temp_word.__len__()==0): return
+    
+    # Check the direction based on row and column values of the tiles
+    rows = [tile.row for tile in temp_word]
+    cols = [tile.col for tile in temp_word]
+
+    if len(set(rows)) == 1:  # All tiles are in the same row (across)
+        direction = 'across'
+        # Sort by column (left to right)
+        temp_word = sorted(temp_word, key=lambda tile: tile.col)
+        positions = cols
+    elif len(set(cols)) == 1:  # All tiles are in the same column (down)
+        direction = 'down'
+        # Sort by row (top to bottom)
+        temp_word = sorted(temp_word, key=lambda tile: tile.row)
+        positions = rows
+    else:
+        direction = 'mixed'
+        assert True, ("Tiles are not aligned. It is not a word")
+    
+    # Print the sorted tiles in the determined direction
+    result = ""
+    for i, tile in enumerate(temp_word):
+        if i > 0:  # If it's not the first tile, check for a gap
+            # Check if there's a gap between consecutive tiles
+            if positions[i] - positions[i - 1] > 1:
+                result += "."
+        result += str(tile.letter)
+
+    print(result)
 
 # Define Alphabet as a Dict includes letters with their counts and points   
 ALPHABET = Dict[LETTER, Tuple[int, int]]

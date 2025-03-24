@@ -111,8 +111,8 @@ def create_new_game() -> Response:
     admin_player_id = -1
 
     player_type = player_types[0]
-    if player_type == "AI":
-        player_id = game.create_player(PlayerType.AI)
+    if player_type == "COMPUTER":
+        player_id = game.create_player(PlayerType.COMPUTER)
     elif player_type == "HUMAN":
         player_id = game.create_player(PlayerType.HUMAN)
     else:
@@ -144,8 +144,8 @@ def join_game() -> Response:
         if game.is_game_started():
             return jsonify({"status": "error", "message": "Game already started"}), 400
 
-        if player_type == "AI":
-            player_id = game.create_player(PlayerType.AI)
+        if player_type == "COMPUTER":
+            player_id = game.create_player(PlayerType.COMPUTER)
         elif player_type == "HUMAN":
             player_id = game.create_player(PlayerType.HUMAN)
         else:

@@ -106,6 +106,10 @@ class Rack:
         copy_container.sort(key=lambda x: ord(x), reverse=reverse)
         return copy_container
 
+    def get_rack(self) -> List[LETTER]:
+        copy_container = copy.deepcopy(self.__container)
+        return copy_container
+
 class DictionaryWrapper:
     def __init__(self, language: LANGUAGE):
         self.__alphabet: ALPHABET = language.alphabet.copy()
@@ -125,19 +129,22 @@ class DictionaryWrapper:
         if len(word) == 0: return False
         return True if self.__dic.has_sequence(word) else False
 
-    def get_sequence_roots(self, word: str) -> Optional[List[str]]:
+    def get_sequence_roots(self, word: str) -> Optional[List[LetterNode]]:
         if len(word) == 0: return None
         return self.__dic.get_sequence_roots(word) if self.__dic.has_sequence(word) else None
+
+    def find_anagrams(self, word: str) -> List[str]:
+        return self.__dic.find_anagrams(word)
 
     def get_alphabet(self) -> ALPHABET:
         return self.__alphabet
 
-@dataclass(frozen=True)
-class Neighbors:
-    up:     Tuple[int, int]
-    right:  Tuple[int, int]
-    down:   Tuple[int, int]
-    left:   Tuple[int, int]
+    def get_all_letters(self) -> List[LETTER]:
+        out: List[LETTER] = []
+        for letter in self.__alphabet.keys():
+            if (letter==BLANK_LETTER): continue
+            out.append(letter)
+        return out
 
 class BoardContainer(np.ndarray):
     def __new__(cls, rows: int, cols: int, default_value: Optional[TILE]=None):
@@ -167,11 +174,11 @@ class BoardContainer(np.ndarray):
 
     @property
     def midrow(self) -> int:
-        return self.shape[0] / 2
+        return self.shape[0] // 2
 
     @property
     def midcol(self) -> int:
-        return self.shape[1] / 2
+        return self.shape[1] // 2
 
     def at(self, row: int, col: int) -> Optional[TILE]:
         return self[row, col]
@@ -190,29 +197,6 @@ class BoardContainer(np.ndarray):
         if col < 0 or col > self.cols:
             return False
         return True
-
-    def has_neighbor(self, row: int, col: int) -> Neighbors:
-        """
-        Check if the cell has any neighbors and returns its neighbors
-        """
-        neighbors: Neighbors = None
-        if row > 0 and not self.is_empty(row - 1, col):
-            neighbors.up = (row - 1, col)
-        else:
-            neighbors.up = None
-        if row < self.rows - 1 and not self.is_empty(row + 1, col):
-            neighbors.down = (row + 1, col)
-        else:
-            neighbors.down = None
-        if col > 0 and not self.is_empty(row, col - 1):
-            neighbors.left = (row, col-1)
-        else:
-            neighbors.left = None
-        if col < self.cols - 1 and not self.is_empty(row, col + 1):
-            neighbors.right = (row + 1, col+1)
-        else:
-            neighbors.right = None
-        return neighbors
 
     def clear(self) -> None:
         self.fill(None)
@@ -242,9 +226,7 @@ class Board:
         self.__cells = BoardContainer(self.__row, self.__col)  # [['' for _ in range(self.__col)] for _ in range(self.__row)]
         self.__special_cells = copy.deepcopy(special_cells)
 
-        self.__cross_checks = []
-        self.__best_score = 0
-
+        self._cross_checks = []
 
         self.clear()
 
@@ -255,6 +237,17 @@ class Board:
     @property
     def cols(self):
         return self.__cells.cols
+
+    @property
+    def midrow(self) -> int:
+        return self.__cells.midrow
+
+    @property
+    def midcol(self) -> int:
+        return self.__cells.midcol
+
+    def get_dictionary(self) -> DictionaryWrapper:
+        return self.__dictionary
 
     def at(self, row: int, col: int) -> Optional[TILE]:
         return self.__cells.at(row, col)
@@ -348,55 +341,6 @@ class Board:
 
         return self.__dictionary.has_word(serialized_word), serialized_word
 
-    @deprecated(version='0.1.0', reason="This method cannot handle cross-words so it is deprecated")
-    def calculate_points(self, word: WORD, is_branched: bool=False) -> int:
-            is_valid, s_word = self.validate_word(word)
-
-            total_points = 0
-            branched_words = set()
-
-            if not is_valid and len(s_word) < 2:
-                return total_points
-            
-            alphabet = self.__dictionary.get_alphabet()
-
-            word_multiplier = 1
-            word_points = 0
-            for tile in word:
-
-                # Add the letter points
-                _, letter_points = alphabet.get(tile.letter, (None, 0))
-
-                # Check if the current cell has special multiplier
-                if not is_branched:
-                    cell_type = self.__special_cells.get(CL(tile.row, tile.col), CT.ORDINARY)
-                    if cell_type == CT.DOUBLE_LETTER:
-                        word_points += letter_points * 2
-                    elif cell_type == CT.TRIPLE_LETTER:
-                        word_points += letter_points * 3
-                    elif cell_type == CT.DOUBLE_WORD:
-                        word_points += letter_points
-                        word_multiplier *= 2
-                    elif cell_type == CT.TRIPLE_WORD:
-                        word_points += letter_points
-                        word_multiplier *= 3
-                    else:
-                        word_points += letter_points
-            
-            total_points =  word_points * word_multiplier
-
-            if (is_branched): return total_points
-
-            # Account for new words formed in either direction (if they exist)
-            # Check horizontal new words formed vertically and vice versa
-            # For simplicity, here we assume new words forming as valid ones.
-            for branched_word in branched_words:
-                total_points += self.calculate_points(branched_word, True)  # Assume calculate_word_points exists
-
-            return total_points
-
-            return 0
-
     @staticmethod
     def get_bonus(ct: CT) -> Tuple[int, int]:
         if ct == CT.DOUBLE_LETTER:
@@ -412,7 +356,7 @@ class Board:
 
     def calculate_points(self, word: WORD) -> int:
         direction = self.find_word_direction(word)
-        
+
         if (direction == Board.Direction.Horizontal):
             sorted_ = sorted(word, key=lambda x: x.col, reverse=False)
 
@@ -453,189 +397,18 @@ class Board:
     def intersection(a: List[str], b: List[str]) -> List[str]:
         return [letter for letter in a if letter in b]
 
-    def is_anchor(self, row, col):
+    def is_anchor(self, row, col) -> bool:
         """
         Unlike Appel and Jacobsen, who anchor plays on empty squares,
         we anchor plays on a square with a tile that has an adjacent
         (horizontal or vertical) non-empty square.
         """
-        return (not self.__cells.is_empty(row, col) and
-                ((col > 0 and self.__cells.is_empty(row, col-1)) or
-                (col < self.__cells.cols - 1 and self.__cells.is_empty(row, col+1)) or
-                (row > 0 and self.__cells.is_empty(row-1, col)) or
-                (row < self.__cells.rows - 1 and self.__cells.is_empty(row+1, col))))
-
-    def _forward(self, row: int, col: int, drow: int, dcol: int, 
-                rack_tiles: WORD, tiles_played: int, d_node: LetterNode, word_so_far: WORD):
-        # Square we're hopefully extending into
-        erow = row + drow
-        ecol = col + dcol
-
-        # Tail recurse; report words as soon as we find them
-        # Are we sitting at the end of a scoring word?
-        if d_node.isEndOfWord and len(word_so_far) >= 2 and tiles_played > 0 and (
-                erow == self.__cells.rows or ecol == self.__cells.cols or not self.__cells.is_empty(erow, ecol)):
-            words = []
-            score = self.score_play(row, col, drow, dcol, word_so_far, words)
-
-            if score > self.__best_score:
-                self.__best_score = score
-                # Report the move
-                #report(Move(
-                #    placements=[t for t in word_so_far if not board.at(t.col, t.row).tile],
-                #    words=words,
-                #    score=score
-                #))
-
-        available = []  # List of letters that can be extended with
-        played_tile = 0
-
-        if erow < self.__cells.rows and ecol < self.__cells.cols:
-            # Do we have an empty cell we can extend into?
-            if self.__cells.is_empty(erow, ecol):
-                have_blank = any(l.is_blank for l in rack_tiles)
-                xc = self.__cross_checks[erow][ecol][dcol]
-
-                available = Board.intersection(d_node.postLetters, xc if not have_blank else Board.intersection(rack_tiles, xc)
-                )
-                played_tile = 1
-            else:
-                # Have pre-placed tile
-                available = [self.__cells.at(erow, ecol).letter]
-        else:  # Off the board
-            available = []
-
-        for letter in available:
-            shrunk_rack = rack_tiles
-            if played_tile > 0:
-                # Letter played from the rack
-                rack_tile = next((l for l in shrunk_rack if l.letter == letter), None) or \
-                            next((l for l in shrunk_rack if l.is_blank), None)
-                word_so_far.append(TILE(row=erow, col=ecol, letter=letter, point=rack_tile.point, is_blank=rack_tile.is_blank))
-                shrunk_rack = [t for t in shrunk_rack if t != rack_tile]
-            else:
-                word_so_far.append(self.__cells.at(erow, ecol))
-
-            for post in d_node.postNodes:
-                if post.letter == letter:
-                    self._forward(erow, ecol, drow, dcol, shrunk_rack, tiles_played + played_tile, post, word_so_far)
-
-            word_so_far.pop()
-
-    def _back(self, row: int, col: int, drow: int, dcol: int,
-             rack_tiles: WORD, tiles_played: int, anchor_node: LetterNode, d_node: LetterNode, word_so_far: WORD):
-        # Square we're hopefully extending into
-        erow = row - drow
-        ecol = col - dcol
-
-        available = []  # the set of possible candidate letters
-        played_tile = 0
-
-        # Do we have an adjacent empty cell we can back up into?
-        if erow >= 0 and ecol >= 0:
-            if self.__cells.is_empty(erow ,ecol):
-                # Find common letters between the rack, cross checks, and dNode pre.
-                have_blank = any(l.is_blank for l in rack_tiles)
-                xc = self.__cross_checks[erow][ecol][dcol]
-
-                available = Board.intersection(d_node.preLetters, xc if not have_blank else Board.intersection([l.letter for l in rack_tiles], xc)
-                )
-                played_tile = 1
-            else:
-                # Non-empty square, might be able to walk back through it
-                available = [self.__cells.at(erow, ecol).letter]
-        else:
-            # Off the board, nothing available for backing up
-            available = []
-
-        # Head recurse; longer words are more likely to be high scoring, so want to find them first
-        for letter in available:
-            shrunk_rack = rack_tiles
-            if played_tile > 0:
-                # Letter came from the rack
-                tile = next((l for l in shrunk_rack if l.letter == letter), None) or next((l for l in shrunk_rack if l.is_blank), None)
-                word_so_far.insert(0, TILE(row=erow, col=ecol, letter=letter, point=tile.point, is_blank=tile.is_blank))
-                shrunk_rack = [t for t in shrunk_rack if t != tile]
-            else:
-                # Letter already on the board
-                word_so_far.insert(0, self.__cells.at(erow, ecol))
-
-            for pre in d_node.preNodes:
-                if pre.letter == letter:
-                    self._back(erow, ecol, drow, dcol, shrunk_rack, tiles_played + played_tile, anchor_node, pre, word_so_far)
-
-            word_so_far.pop(0)
-
-        # If this is the start of a word in the dictionary, and we're at the edge of the board or the prior cell is empty,
-        # then we have a valid word start.
-        if len(d_node.preNodes) == 0 and (erow < 0 or ecol < 0 or self.__cells.is_empty(erow, ecol)):
-            # Try extending down beyond the anchor, with the letters
-            # that we have determined comprise a valid rooted sequence.
-            self._forward(row + drow * (len(word_so_far) - 1), col + dcol * (len(word_so_far) - 1), drow, dcol,
-                    rack_tiles, tiles_played, anchor_node, word_so_far)
-
-    def compute_cross_checks(self, available: List[str]) -> None:
-        xChecks = []
-        for col in range(self.__cells.cols):
-            this_col = []
-            xChecks.append(this_col)
-
-            for row in range(self.__cells.rows):
-                this_cell = [[], []]
-                this_col.append(this_cell)
-
-                if not self.__cells.is_empty(row, col):
-                    # The cell isn't empty, only this letter is valid.
-                    letter = self.__cells.at(row, col).letter
-                    this_cell[0].append(letter)
-                    this_cell[1].append(letter)
-                    continue
-
-                # Find the words above and below
-                word_above = ""
-                r = row - 1
-                while r >= 0 and not self.__cells.is_empty(r, col):
-                    word_above = self.__cells.at(r, col).letter + word_above
-                    r -= 1
-
-                word_below = ""
-                r = row + 1
-                while r < self.__cells.rows and not self.__cells.is_empty(r, col):
-                    word_below += self.__cells.at(r, col).letter
-                    r += 1
-
-                # Find the words left and right
-                word_left = ""
-                c = col - 1
-                while c >= 0 and not self.__cells.is_empty(row, c):
-                    word_left = self.__cells.at(row, c).letter + word_left
-                    c -= 1
-
-                word_right = ""
-                c = col + 1
-                while c < self.__cells.cols and not self.__cells.is_empty(row, c):
-                    word_right += self.__cells.at(row, c).letter
-                    c += 1
-
-                # Find which (if any) letters form a valid cross word
-                for letter in available:
-                    h = word_left + letter + word_right
-
-                    # Check if h is a valid word or a legal sequence
-                    h_is_word = len(h) == 1 or self.__dictionary.has_word(h)
-                    h_is_seq = h_is_word or (col > 0 and self.__dictionary.has_sequence(h))
-
-                    v = word_above + letter + word_below
-                    v_is_word = len(v) == 1 or self.__dictionary.has_word(v)
-                    v_is_seq = v_is_word or (row > 0 and self.__dictionary.has_sequence(v))
-
-                    if h_is_word and v_is_seq:
-                        this_cell[0].append(letter)  # Valid down word
-
-                    if v_is_word and h_is_seq:
-                        this_cell[1].append(letter)  # Valid across word
-        
-        self.__cross_checks = xChecks
+        if not self.__cells.is_empty(row, col):       
+            return ((col > 0 and self.__cells.is_empty(row, col-1)) or
+                    (col < self.__cells.cols - 1 and self.__cells.is_empty(row, col+1)) or
+                    (row > 0 and self.__cells.is_empty(row-1, col)) or
+                    (row < self.__cells.rows - 1 and self.__cells.is_empty(row+1, col)))
+        return False
 
     def score_play(self, row: int, col: int, drow: int, dcol: int, tiles: List[TILE], words: Optional[List[Dict[str, int]]] = None) -> int:
         """
@@ -716,7 +489,30 @@ class Board:
 
         return word_score + cross_words_score
 
-    def print(self):
+    def deserialize(self, serialized_board: str):
+        alphabet = self.__dictionary.get_alphabet()
+        # Split the board into lines
+        lines = serialized_board.split("\n")
+
+        # Extract only the board rows (ignoring the first two and last lines)
+        r = 0
+        for line in lines[2:-1]:  # Ignore headers and the border
+            if not (line.split("|").__len__() == 3): continue
+            
+            row_content = line.split("|")[1].strip()
+            row_tiles = row_content.split("  ")  # Split into individual tiles
+            for c, l in enumerate(row_tiles):
+                l = l.strip()
+                if l == ".": continue
+                is_blank = True if l == "_" else False
+                l = BLANK_LETTER if l == "_" else l
+
+                tile = TILE(r, c, l, alphabet[l][1], is_blank)
+                self.place_tile(tile)
+            r += 1
+
+    def serialize(self) -> str:
+        output = ""
         # Get the number of rows and columns
         rows = self.__cells.rows
         cols = self.__cells.cols
@@ -735,25 +531,30 @@ class Board:
                     board[r][c] = self.__cells.at(r, c).letter
         
         # Print the column headers
-        print("     " + "  ".join(column_headers))
+        output += "     " + "  ".join(column_headers) + "\n"
 
         # Print the top border
-        print("   +-" + "---" * cols + "+")
+        output += "   +-" + "---" * cols + "+" + "\n"
         
         # Print the board with row numbering
         for r in range(rows):
             # Print the row number (aligned with two spaces for better formatting)
-            print(f"{r+1:2} |", end=" ")
+            output += f"{r+1:2} |" + " "
             
             # Print the row contents
             for c in range(cols):
-                print(f"{board[r][c]} ", end=" ")
+                output += f"{board[r][c]} " + " "
             
             # Print the right border
-            print("|")
+            output += "|" + "\n"
 
         # Print the bottom border
-        print("   +-" + "---" * cols + "+")
+        output += "   +-" + "---" * cols + "+" + "\n"
+
+        return output
+
+    def print(self):
+        print(self.serialize())
 
     def find_word_direction(self, word: WORD) -> Direction:
         rows: Dict[int, WORD] = {}
@@ -842,3 +643,205 @@ class Board:
 
         return completed_word
 
+    def calculate_bonus(self, tilesPlaced: int) -> int:
+        return 0
+
+    def compute_cross_checks(self, available: List[LETTER]) -> None:
+        """
+        @brief Determine which letters can fit in each square and form a valid
+        horizontal or vertical cross word.
+        @param available: set of available letters
+        """
+
+        for col in range(self.cols):
+            col_list = []
+            self._cross_checks.append(col_list)
+            for row in range(self.rows):
+                cell = [[], []]
+                col_list.append(cell)
+                
+                if not self.__cells.is_empty(row, col):
+                    cell[0].append(self.at(row, col).letter)
+                    cell[1].append(self.at(row, col).letter)
+                    continue
+
+                word_above, r = "", row - 1
+                while r >= 0 and not self.__cells.is_empty(r, col):
+                    word_above = self.at(r, col).letter + word_above
+                    r -= 1
+
+                word_below, r = "", row + 1
+                while r < self.rows and not self.__cells.is_empty(r, col):
+                    word_below += self.at(r, col).letter
+                    r += 1
+
+                word_left, c = "", col - 1
+                while c >= 0 and not self.__cells.is_empty(row, c):
+                    word_left = self.at(row, c).letter + word_left
+                    c -= 1
+
+                word_right, c = "", col + 1
+                while c < self.cols and not self.__cells.is_empty(row, c):
+                    word_right += self.at(row, c).letter
+                    c += 1
+
+                # Find which letters form a valid cross word
+                for letter in available:
+                    h = word_left + letter + word_right
+                    h_is_word = len(h) == 1 or self.__dictionary.has_word(h)
+                    h_is_seq = h_is_word or (col > 0 and self.__dictionary.has_sequence(h))
+
+                    v = word_above + letter + word_below
+                    v_is_word = len(v) == 1 or self.__dictionary.has_word(v)
+                    v_is_seq = v_is_word or (row > 0 and self.__dictionary.has_sequence(v))
+
+                    if h_is_word and v_is_seq:
+                        cell[0].append(letter)
+                    if v_is_word and h_is_seq:
+                        cell[1].append(letter)
+
+    def forward(self, row: int, col: int, 
+                drow: int, dcol: int, 
+                rack_tiles: List[TILE], tiles_played: int, 
+                d_node: LetterNode, word_so_far: List[TILE], 
+                best_score: int, best_word: List[TILE]) -> None:
+        """
+        @brief Recursively extend a word on the board by adding valid letters from the rack or existing tiles.
+        @param row: Current row position on the board.
+        @param col: Current column position on the board.
+        @param drow: Direction of movement in rows (1 for down, 0 for across).
+        @param dcol: Direction of movement in columns (1 for across, 0 for down).
+        @param rack_tiles: Tiles remaining on the rack.
+        @param tiles_played: Number of tiles played so far.
+        @param current_node: Current node in the dictionary trie.
+        @param word_so_far: Letters of the word formed so far.
+        @param best_score: Highest score found so far.
+        @param best_word: Highest-scoring word found so far.
+        """
+        # Square we're hopefully extending into
+        erow = row + drow
+        ecol = col + dcol
+
+        # Tail recursion
+        if (d_node.isEndOfWord and len(word_so_far) >= 2 and tiles_played > 0 and
+            (ecol == self.cols or erow == self.rows or not self.at(erow, ecol))):
+            words = []
+
+            score = self.score_play(row, col, drow, dcol, word_so_far, words)
+            
+            if score > best_score:
+                print("*************")
+                PRINT_WORD(best_word)
+                print("*************")
+                # TODO this is best score so far
+                best_score = score
+                best_word = word_so_far
+        
+        available = []  # List of letters that can be extended with
+        played_tile = 0
+        
+        if ecol < self.cols and erow < self.rows:
+            if self.__cells.is_empty(erow, ecol):
+                have_blank = any(t.is_blank for t in rack_tiles)
+                xc = self._cross_checks[ecol][erow][dcol]
+                available = Board.intersection(d_node.postLetters,
+                                               xc if have_blank else Board.intersection([t.letter for t in rack_tiles], xc))
+                
+                played_tile = 1
+            else:
+                available = [self.at(erow, ecol).letter]
+        
+        for letter in available:
+            shrunk_rack = rack_tiles[:]
+            
+            if played_tile > 0:
+                rack_tile = next((tile for tile in shrunk_rack if tile.letter == letter), 
+                                next((tile for tile in shrunk_rack if tile.is_blank), None))
+
+                word_so_far.append(TILE(erow, ecol, letter, rack_tile.point, rack_tile.is_blank))
+                shrunk_rack = [t for t in shrunk_rack if t != rack_tile]
+            else:
+                word_so_far.append(self.at(erow, ecol))
+            
+            for post in d_node.postNodes:
+                if post.letter == letter:
+                    self.forward(erow, ecol, 
+                                 drow, dcol, 
+                                 shrunk_rack, tiles_played + played_tile, 
+                                 post, word_so_far, 
+                                 best_score, best_word)
+            
+            word_so_far.pop()
+
+    def back(self, row: int, col: 
+             int, drow: int, dcol: int, 
+             rack_tiles: List[TILE], tiles_played: int, anchor_node: LetterNode, 
+             d_node: LetterNode, word_so_far: List[TILE], 
+             best_score: int, best_word: List[TILE]):
+        """
+        @brief Try to back up before extending the word in the given direction.
+        @param col: Column index of the last letter in the word so far
+        @param row: Row index of the last letter in the word so far
+        @param dcol: Direction indicator for horizontal movement
+        @param drow: Direction indicator for vertical movement
+        @param rack_tiles: List of available tiles from the player's rack
+        @param tiles_played: Number of tiles used from the rack
+        @param anchor_node: Starting dictionary node for backing up
+        @param d_node: Current dictionary node
+        @param word_so_far: List of tiles forming the current word in reverse order
+        @param best_score: Highest score found so far.
+        @param best_word: Highest-scoring word found so far.
+        """
+        # Square we're hopefully extending into
+        erow = row - drow
+        ecol = col - dcol
+        available = []  # Set of possible candidate letters
+        played_tile = 0
+
+        # Check if we have an adjacent empty cell to back up into
+        if ecol >= 0 and erow >= 0:
+            if self.__cells.is_empty(erow, ecol):
+                # Find common letters between rack, cross-checks, and dictionary node prefixes
+                have_blank = any(tile.is_blank for tile in rack_tiles)
+                xc = self._cross_checks[ecol][erow][dcol]
+
+                available = Board.intersection(d_node.preLetters,
+                                               xc if have_blank else Board.intersection([t.letter for t in rack_tiles], xc))               
+                played_tile = 1
+            else:
+                # Non-empty square, use its letter
+                available = [self.at(erow, ecol).letter]
+        
+        # Head recursion to explore longer words first
+        for letter in available:
+            shrunk_rack = rack_tiles[:]
+            if played_tile > 0:
+                # Letter came from the rack
+                tile = next((t for t in shrunk_rack if t.letter == letter), 
+                            next((t for t in shrunk_rack if t.is_blank), None))
+
+                # Placement is not used in score calculation
+                word_so_far.insert(0, TILE(erow, ecol, letter, tile.point, tile.is_blank))
+                shrunk_rack = [t for t in shrunk_rack if t != tile]
+            else:
+                # Letter already on the self
+                word_so_far.insert(0, self.at(erow, ecol))
+
+            for pre in d_node.preNodes:
+                if pre.letter == letter:
+                    self.back(erow, ecol, 
+                              drow, dcol, 
+                              shrunk_rack, tiles_played + played_tile, anchor_node, 
+                              pre, word_so_far,
+                              best_score, best_word)
+            
+            word_so_far.pop(0)
+
+        # If this is the start of a valid word and we're at the board edge or an empty cell
+        if not d_node.preNodes and (erow < 0 or ecol < 0 or self.__cells.is_empty(erow, ecol)):
+            self.forward(row + drow * (len(word_so_far) - 1),
+                         col + dcol * (len(word_so_far) - 1),
+                         drow, dcol,
+                         rack_tiles, tiles_played,
+                         anchor_node, word_so_far,
+                         best_score, best_word)
