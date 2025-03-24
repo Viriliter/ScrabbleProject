@@ -9,7 +9,7 @@ class TestBoard(unittest.TestCase):
     def setUp(self):
         language = LANGUAGES['ENG']
         self.dict = DictionaryWrapper(language)
-    """
+    
     @measure_time
     def test_serialize_words_horizontal(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
@@ -132,7 +132,7 @@ class TestBoard(unittest.TestCase):
         for expected, (word, exp_score) in word_list.items():
             points = board.calculate_points(word)
             self.assertEqual(points, exp_score, f"Failed for word: {expected}")
-    """
+    
     @measure_time
     def test_calculate_points_complex(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
@@ -150,11 +150,39 @@ class TestBoard(unittest.TestCase):
             'OPERA':     ([TILE(3 , 3 , 'O'),TILE(4 , 3 , 'P'),TILE(5 , 3 , 'E'),TILE(6 , 3 , 'R'),TILE(7 , 3 , 'A')],                                                                   20)
         }
 
-        for expected, (word, exp_score) in word_list.items():
+        for expected, (word, exp_score) in word_list.items():           
             points = board.calculate_points(word)
             board.place_word(word)
             board.print()
             self.assertEqual(points, exp_score, f"Failed for word: {expected}")
+    
+    def test_load_from_string(self):
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+
+        expected_output = ""
+        expected_output += "     A  B  C  D  E  F  G  H  I  J  K  L  M  N  O\n"
+        expected_output += "   +----------------------------------------------+\n"
+        expected_output += " 1 | C  .  .  .  .  .  .  .  .  .  .  .  .  .  A  |\n"
+        expected_output += " 2 | .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  |\n"
+        expected_output += " 3 | .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  |\n"
+        expected_output += " 4 | .  .  .  O  .  .  .  .  .  .  .  .  .  .  .  |\n"
+        expected_output += " 5 | .  .  .  P  .  .  .  A  .  .  .  .  .  .  .  |\n"
+        expected_output += " 6 | .  .  .  E  .  .  .  S  .  W  .  .  .  .  .  |\n"
+        expected_output += " 7 | .  .  .  R  .  P  Y  T  H  O  N  .  .  .  .  |\n"
+        expected_output += " 8 | .  .  .  A  L  A  .  R  .  R  O  L  E  .  .  |\n"
+        expected_output += " 9 | .  .  .  .  .  .  .  O  .  L  .  .  .  .  .  |\n"
+        expected_output += "10 | .  .  .  .  .  .  .  N  .  D  .  .  .  .  .  |\n"
+        expected_output += "11 | .  .  .  H  E  L  L  O  .  .  .  .  .  .  .  |\n"
+        expected_output += "12 | .  .  .  .  .  .  .  M  U  M  M  Y  .  .  .  |\n"
+        expected_output += "13 | .  .  .  .  .  .  .  Y  .  .  .  A  Y  E  .  |\n"
+        expected_output += "14 | .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  |\n"
+        expected_output += "15 | .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  |\n"
+        expected_output += "   +----------------------------------------------+\n"
+
+        board.deserialize(expected_output)
+        result = board.serialize()
+        
+        self.assertEqual(expected_output, result, f"Failed")
 
 if __name__ == '__main__':
     unittest.main()
