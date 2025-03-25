@@ -58,7 +58,7 @@ class TestBoard(unittest.TestCase):
         board.deserialize(serialized_board)
 
         player.add_tiles(["E", "I", "I", "Y", "A", "H", " ", " "])
-        best_score, best_word = player.find_best_play()
+        best_score, best_word = player.play_turn()
         exp_best_score = 42
         exp_best_word = [TILE(0,0, "H"), TILE(0,0, "A"), TILE(0,0, "I"), TILE(0,0, "R"),
                          TILE(0,0, "I"), TILE(0,0, "E"), TILE(0,0, "S"), TILE(0,0, "T")]
