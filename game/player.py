@@ -129,7 +129,7 @@ class Player:
     def widthdraw(self) -> None:
         self._player_state = PlayerState.LOST
 
-    def play_turn(self, word: WORD) -> Tuple[int, WORD]:
+    def play_turn(self) -> Tuple[int, WORD]:
         if not (self._player_state == PlayerState.PLAYING):
             return None, None
         return None, None

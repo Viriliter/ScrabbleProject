@@ -398,22 +398,72 @@ class Board:
     def serialize(self) -> Dict[str, LETTER]:
         return self.__cells.serialize()
 
-    @staticmethod
-    def intersection(a: List[str], b: List[str]) -> List[str]:
-        return [letter for letter in a if letter in b]
+    def deserialize(self, serialized_board: str):
+        alphabet = self.__dictionary.get_alphabet()
+        # Split the board into lines
+        lines = serialized_board.split("\n")
 
-    def is_anchor(self, row, col) -> bool:
-        """
-        Unlike Appel and Jacobsen, who anchor plays on empty squares,
-        we anchor plays on a square with a tile that has an adjacent
-        (horizontal or vertical) non-empty square.
-        """
-        if not self.__cells.is_empty(row, col):
-            return ((col > 0 and self.__cells.is_empty(row, col-1)) or
-                    (col < self.__cells.cols - 1 and self.__cells.is_empty(row, col+1)) or
-                    (row > 0 and self.__cells.is_empty(row-1, col)) or
-                    (row < self.__cells.rows - 1 and self.__cells.is_empty(row+1, col)))
-        return False
+        # Extract only the board rows (ignoring the first two and last lines)
+        r = 0
+        for line in lines[2:-1]:  # Ignore headers and the border
+            if not (line.split("|").__len__() == 3): continue
+            
+            row_content = line.split("|")[1].strip()
+            row_tiles = row_content.split("  ")  # Split into individual tiles
+            for c, l in enumerate(row_tiles):
+                l = l.strip()
+                if l == ".": continue
+                is_blank = True if l == "_" else False
+                l = BLANK_LETTER if l == "_" else l
+
+                tile = TILE(r, c, l, alphabet[l][1], is_blank)
+                self.place_tile(tile)
+            r += 1
+
+    def serialize2str(self) -> str:
+        output = ""
+        # Get the number of rows and columns
+        rows = self.__cells.rows
+        cols = self.__cells.cols
+        
+        # Generate column headers (A, B, C, ...)
+        column_headers = string.ascii_uppercase[:cols]
+        
+        # Create a 2D grid representation of the board
+        board = [["." for _ in range(cols)] for _ in range(rows)]
+        
+        # Populate the board with the current letters
+        for r in range(rows):
+            for c in range(cols):
+                if not self.__cells.is_empty(r, c):
+                    # If the cell is not empty, get the letter and place it on the board
+                    board[r][c] = self.__cells.at(r, c).letter
+        
+        # Print the column headers
+        output += "     " + "  ".join(column_headers) + "\n"
+
+        # Print the top border
+        output += "   +-" + "---" * cols + "+" + "\n"
+        
+        # Print the board with row numbering
+        for r in range(rows):
+            # Print the row number (aligned with two spaces for better formatting)
+            output += f"{r+1:2} |" + " "
+            
+            # Print the row contents
+            for c in range(cols):
+                output += f"{board[r][c]} " + " "
+            
+            # Print the right border
+            output += "|" + "\n"
+
+        # Print the bottom border
+        output += "   +-" + "---" * cols + "+" + "\n"
+
+        return output
+
+    def print(self):
+        print(self.serialize())
 
     def score_play(self, row: int, col: int, drow: int, dcol: int, tiles: List[TILE], words: Optional[List[Dict[str, int]]] = None) -> int:
         """
@@ -494,72 +544,22 @@ class Board:
 
         return word_score + cross_words_score
 
-    def deserialize(self, serialized_board: str):
-        alphabet = self.__dictionary.get_alphabet()
-        # Split the board into lines
-        lines = serialized_board.split("\n")
+    @staticmethod
+    def intersection(a: List[str], b: List[str]) -> List[str]:
+        return [letter for letter in a if letter in b]
 
-        # Extract only the board rows (ignoring the first two and last lines)
-        r = 0
-        for line in lines[2:-1]:  # Ignore headers and the border
-            if not (line.split("|").__len__() == 3): continue
-            
-            row_content = line.split("|")[1].strip()
-            row_tiles = row_content.split("  ")  # Split into individual tiles
-            for c, l in enumerate(row_tiles):
-                l = l.strip()
-                if l == ".": continue
-                is_blank = True if l == "_" else False
-                l = BLANK_LETTER if l == "_" else l
-
-                tile = TILE(r, c, l, alphabet[l][1], is_blank)
-                self.place_tile(tile)
-            r += 1
-
-    def serialize(self) -> str:
-        output = ""
-        # Get the number of rows and columns
-        rows = self.__cells.rows
-        cols = self.__cells.cols
-        
-        # Generate column headers (A, B, C, ...)
-        column_headers = string.ascii_uppercase[:cols]
-        
-        # Create a 2D grid representation of the board
-        board = [["." for _ in range(cols)] for _ in range(rows)]
-        
-        # Populate the board with the current letters
-        for r in range(rows):
-            for c in range(cols):
-                if not self.__cells.is_empty(r, c):
-                    # If the cell is not empty, get the letter and place it on the board
-                    board[r][c] = self.__cells.at(r, c).letter
-        
-        # Print the column headers
-        output += "     " + "  ".join(column_headers) + "\n"
-
-        # Print the top border
-        output += "   +-" + "---" * cols + "+" + "\n"
-        
-        # Print the board with row numbering
-        for r in range(rows):
-            # Print the row number (aligned with two spaces for better formatting)
-            output += f"{r+1:2} |" + " "
-            
-            # Print the row contents
-            for c in range(cols):
-                output += f"{board[r][c]} " + " "
-            
-            # Print the right border
-            output += "|" + "\n"
-
-        # Print the bottom border
-        output += "   +-" + "---" * cols + "+" + "\n"
-
-        return output
-
-    def print(self):
-        print(self.serialize())
+    def is_anchor(self, row, col) -> bool:
+        """
+        Unlike Appel and Jacobsen, who anchor plays on empty squares,
+        we anchor plays on a square with a tile that has an adjacent
+        (horizontal or vertical) non-empty square.
+        """
+        if not self.__cells.is_empty(row, col):
+            return ((col > 0 and self.__cells.is_empty(row, col-1)) or
+                    (col < self.__cells.cols - 1 and self.__cells.is_empty(row, col+1)) or
+                    (row > 0 and self.__cells.is_empty(row-1, col)) or
+                    (row < self.__cells.rows - 1 and self.__cells.is_empty(row+1, col)))
+        return False
 
     def find_word_direction(self, word: WORD) -> Direction:
         rows: Dict[int, WORD] = {}
@@ -862,3 +862,100 @@ class Board:
                          drow, dcol,
                          rack_tiles, tiles_played,
                          anchor_node, word_so_far)
+    
+    def best_opening_play(self, rack_tiles: List[TILE]) -> Tuple[int, WORD]:
+        ruck = "".join(t.letter if t.letter else " " for t in rack_tiles)
+        dictionary = self._board.get_dictionary()
+
+        choices = dictionary.find_anagrams(ruck)
+        drow = random.randint(0, 1)
+        dcol = (drow + 1) % 2
+        vertical = dcol == 0
+        best_score = 0
+        best_word = []
+        
+        for choice in choices:
+            placements: List[TILE] = []
+            shrunk_rack = rack_tiles[:]
+            for c in choice:
+                rack_tile = next((t for t in shrunk_rack if t.letter == c), None) or next((t for t in shrunk_rack if t.is_blank), None)
+                assert rack_tile, "Can't do this with the available tiles"
+                # Placement will be fixed later
+                placements.append(TILE(0, 0, c, rack_tile.point, rack_tile.is_blank))
+                shrunk_rack.remove(rack_tile)
+            
+            mid = self._board.midcol if vertical else self._board.midrow
+            for end in range(mid, mid + len(choice)):
+                row, col = (mid, end) if vertical else (end, mid)
+                score = self._board.score_play(row, col, drow, dcol, placements)
+                score += self._board.calculate_bonus(len(placements))
+                
+                if score > best_score:
+                    best_score = score
+                    for i, placement in enumerate(placements):
+                        pos = end - len(placements) + i + 1
+                        placement.col = self._board.midcol if dcol == 0 else pos * dcol
+                        placement.row = self._board.midrow if drow == 0 else pos * drow
+                    
+                    print("£££££££££££££")
+                    PRINT_WORD(best_word)
+                    print("£££££££££££££")
+
+                    best_word = placements
+                    
+                    #TODO report the placement
+                    #report({"placements": placements, "word": choice, "score": score})
+        
+        return (best_score, best_word)
+
+    def find_best_play(self, rack_letters: List[LETTER]) -> Tuple[int, WORD]:
+        # Convert list of letters to list of tiles
+        rack_tiles: List[TILE] = []
+        for letter in rack_letters:
+            is_blank = True if letter == BLANK_LETTER else False
+            rack_tiles.append(TILE(0, 0, letter, self.__dictionary.get_alphabet()[letter][1], is_blank, False))
+
+        # Sort the rack tiles by point value and then by letter
+        rack_tiles = sorted(rack_tiles, key=lambda t: (-t.point, t.letter))
+
+        best_score = 0
+        best_word: WORD = []
+        anchored = False
+                
+        # Has at least one anchor been explored? If there are no anchors, we need to compute an opening play
+        anchored = False
+
+        for col in range(self.cols):
+            for row in range(self.rows):
+                # An anchor is any square that has a tile and has an
+                # adjacent blank that can be extended into to form a word
+                if self.is_anchor(row, col):
+                    if not anchored:
+                        # What letters can be used to form a valid cross word? 
+                        # The whole alphabet if the rack contains a blank, the rack otherwise.
+                        available = self.__dictionary.get_all_letters() if any(t.is_blank for t in rack_tiles) else [t.letter for t in rack_tiles]
+                        self.compute_cross_checks(available)
+                        anchored = True
+
+                    anchor_tile = self.at(row, col)
+
+                    roots = self.__dictionary.get_sequence_roots(anchor_tile.letter)
+                    for anchor_node in roots:
+                        # Try and back up then forward through the dictionary to find longer sequences across
+                        self.back(row, col, 0, 1,
+                                         rack_tiles, 0,
+                                         anchor_node, anchor_node,
+                                         [ anchor_tile ])
+
+                        # down
+                        self.back(row, col, 1, 0,
+                                         rack_tiles, 0,
+                                         anchor_node, anchor_node,
+                                         [ anchor_tile ])
+
+        if not anchored:
+            best_score, best_word = self.best_opening_play(rack_tiles)
+        else:
+            return self.get_best_move()
+        
+        return best_score, best_word

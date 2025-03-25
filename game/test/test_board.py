@@ -180,7 +180,7 @@ class TestBoard(unittest.TestCase):
         expected_output += "   +----------------------------------------------+\n"
 
         board.deserialize(expected_output)
-        result = board.serialize()
+        result = board.serialize2str()
         
         self.assertEqual(expected_output, result, f"Failed")
 

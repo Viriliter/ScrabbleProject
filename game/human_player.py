@@ -12,7 +12,3 @@ class HumanPlayer(Player):
         super().__init__(board)
         self._player_type = PlayerType.HUMAN
         self._player_privileges = player_privileges
-
-    def play_turn(self, word: WORD) -> None:
-        if not (self._player_state == PlayerState.PLAYING):
-            return

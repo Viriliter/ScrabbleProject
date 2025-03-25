@@ -55,7 +55,7 @@ class TestBoard(unittest.TestCase):
         #serialized_board += "15 | .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  |\n"
         #serialized_board += "   +----------------------------------------------+\n"
 
-        board.deserialize(serialized_board)
+        board.deserialize2str(serialized_board)
 
         player.add_tiles(["E", "I", "I", "Y", "A", "H", " ", " "])
         best_score, best_word = player.find_best_play()
