@@ -398,28 +398,6 @@ class Board:
     def serialize(self) -> Dict[str, LETTER]:
         return self.__cells.serialize()
 
-    def deserialize(self, serialized_board: str):
-        alphabet = self.__dictionary.get_alphabet()
-        # Split the board into lines
-        lines = serialized_board.split("\n")
-
-        # Extract only the board rows (ignoring the first two and last lines)
-        r = 0
-        for line in lines[2:-1]:  # Ignore headers and the border
-            if not (line.split("|").__len__() == 3): continue
-            
-            row_content = line.split("|")[1].strip()
-            row_tiles = row_content.split("  ")  # Split into individual tiles
-            for c, l in enumerate(row_tiles):
-                l = l.strip()
-                if l == ".": continue
-                is_blank = True if l == "_" else False
-                l = BLANK_LETTER if l == "_" else l
-
-                tile = TILE(r, c, l, alphabet[l][1], is_blank)
-                self.place_tile(tile)
-            r += 1
-
     def serialize2str(self) -> str:
         output = ""
         # Get the number of rows and columns
@@ -462,8 +440,30 @@ class Board:
 
         return output
 
-    def print(self):
-        print(self.serialize())
+    def deserialize(self, serialized_board: str):
+        alphabet = self.__dictionary.get_alphabet()
+        # Split the board into lines
+        lines = serialized_board.split("\n")
+
+        # Extract only the board rows (ignoring the first two and last lines)
+        r = 0
+        for line in lines[2:-1]:  # Ignore headers and the border
+            if not (line.split("|").__len__() == 3): continue
+            
+            row_content = line.split("|")[1].strip()
+            row_tiles = row_content.split("  ")  # Split into individual tiles
+            for c, l in enumerate(row_tiles):
+                l = l.strip()
+                if l == ".": continue
+                is_blank = True if l == "_" else False
+                l = BLANK_LETTER if l == "_" else l
+
+                tile = TILE(r, c, l, alphabet[l][1], is_blank)
+                self.place_tile(tile)
+            r += 1
+
+    def print(self) -> None:
+        print(self.serialize2str())
 
     def score_play(self, row: int, col: int, drow: int, dcol: int, tiles: List[TILE], words: Optional[List[Dict[str, int]]] = None) -> int:
         """
