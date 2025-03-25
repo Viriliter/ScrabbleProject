@@ -16,7 +16,7 @@ class ComputerPlayer(Player):
         
         self.set_player_state(PlayerState.READY)
 
-    def play_turn(self) -> Tuple[int, WORD]:
+    def play_turn(self) -> Tuple[Optional[int], Optional[WORD]]:
         if not (self._player_state == PlayerState.PLAYING):
             return None, None
         

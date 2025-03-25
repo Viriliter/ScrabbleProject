@@ -274,6 +274,9 @@ class Board:
             return False
 
     def place_word(self, word: WORD) -> bool:
+        if word is None or len(word) == 0:
+            return False
+        
         is_placed = True
         for tile in word:
             is_placed &= self.place_tile(tile)
@@ -865,9 +868,8 @@ class Board:
     
     def best_opening_play(self, rack_tiles: List[TILE]) -> Tuple[int, WORD]:
         ruck = "".join(t.letter if t.letter else " " for t in rack_tiles)
-        dictionary = self._board.get_dictionary()
 
-        choices = dictionary.find_anagrams(ruck)
+        choices = self.__dictionary.find_anagrams(ruck)
         drow = random.randint(0, 1)
         dcol = (drow + 1) % 2
         vertical = dcol == 0
@@ -884,18 +886,18 @@ class Board:
                 placements.append(TILE(0, 0, c, rack_tile.point, rack_tile.is_blank))
                 shrunk_rack.remove(rack_tile)
             
-            mid = self._board.midcol if vertical else self._board.midrow
+            mid = self.midcol if vertical else self.midrow
             for end in range(mid, mid + len(choice)):
                 row, col = (mid, end) if vertical else (end, mid)
-                score = self._board.score_play(row, col, drow, dcol, placements)
-                score += self._board.calculate_bonus(len(placements))
+                score = self.score_play(row, col, drow, dcol, placements)
+                score += self.calculate_bonus(len(placements))
                 
                 if score > best_score:
                     best_score = score
                     for i, placement in enumerate(placements):
                         pos = end - len(placements) + i + 1
-                        placement.col = self._board.midcol if dcol == 0 else pos * dcol
-                        placement.row = self._board.midrow if drow == 0 else pos * drow
+                        placement.col = self.midcol if dcol == 0 else pos * dcol
+                        placement.row = self.midrow if drow == 0 else pos * drow
                     
                     print("£££££££££££££")
                     PRINT_WORD(best_word)

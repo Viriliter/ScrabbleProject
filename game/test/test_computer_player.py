@@ -3,6 +3,7 @@ import unittest
 from game.components import Board, DictionaryWrapper
 from game.computer_player import ComputerPlayer
 from game.globals import *
+from game.player import PlayerState
 from game.utils import *
 
 class TestBoard(unittest.TestCase):
@@ -58,6 +59,7 @@ class TestBoard(unittest.TestCase):
         board.deserialize(serialized_board)
 
         player.add_tiles(["E", "I", "I", "Y", "A", "H", " ", " "])
+        player.set_player_state(PlayerState.PLAYING)
         best_score, best_word = player.play_turn()
         exp_best_score = 42
         exp_best_word = [TILE(0,0, "H"), TILE(0,0, "A"), TILE(0,0, "I"), TILE(0,0, "R"),
