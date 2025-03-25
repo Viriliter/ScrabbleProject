@@ -211,7 +211,7 @@ class LetterNode:
 
         chars_ = copy.deepcopy(chars)
 
-        while node:
+        while node is not None:
             # is this character available from chars?
             # Only use blank if no other choice
             i = -1
@@ -224,7 +224,7 @@ class LetterNode:
                 try:
                     i = chars_.index(" ")
                 except ValueError:
-                    pass  # blank space also not found, continue
+                    i = -1  # blank space also not found
 
             if i >= 0:
                 match = chars_[i]
@@ -240,7 +240,7 @@ class LetterNode:
                     # over our child node chain
                     chars_.pop(i)
                     child = node.child
-                    while child:
+                    while child is not None:
                         child.find_words_that_use(
                             chars_,
                             real_word + node.letter,

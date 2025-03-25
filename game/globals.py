@@ -184,15 +184,7 @@ class TILE:
     
     def __repr__(self) -> str:
         return self.__str__()
-    
-    def __eq__(self, other):
-        if isinstance(other, TILE):
-            return self.letter == other.letter
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-    
+   
 # Define WORD as a list of TILEs
 WORD = List[TILE]
 
@@ -239,6 +231,14 @@ class LANGUAGE:
     alphabet: ALPHABET
     uri: str
 
+@dataclass(frozen=True)
+class MOVE:
+    score: int
+    word: WORD
+    
+    def __lt__(self, other: 'MOVE') -> bool:
+        return self.score > other.score
+    
 BOARD_ROW: int = 15
 
 BOARD_COL: int = 15
@@ -248,7 +248,7 @@ INITIAL_TILE_COUNT: int = 7
 
 MIN_PLAYER_COUNT: int = 2
 
-AI_PLAYER_NAMES = ["Socrates", "Plato", "Aristotle", "Marx"]
+COMPUTER_PLAYER_NAMES = ["Socrates", "Plato", "Aristotle", "Marx"]
 
 # Letter: (Count, Points)
 ALPH_ENGLISH: ALPHABET = {

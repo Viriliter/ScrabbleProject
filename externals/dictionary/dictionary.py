@@ -143,21 +143,16 @@ class Dictionary:
         """
         self.sequence_roots: Dict[str, List[LetterNode]] = {}
 
+        def callback(node: LetterNode) -> bool:
+            if node.letter not in self.sequence_roots:
+                self.sequence_roots[node.letter] = [node]
+            else:
+                self.sequence_roots[node.letter].append(node)
+            return True  # Continue iteration
+
         if self.root is not None:
-            self.root.each_node(lambda node: self._add_to_sequence_roots(node))
+            self.root.each_node(callback)
     
-    def _add_to_sequence_roots(self, node: LetterNode) -> bool:
-        """
-        @brief Helper method to add nodes to sequence_roots.
-
-        @return: true after adding node to the sequence roots
-        """
-        if node.letter not in self.sequence_roots:
-            self.sequence_roots[node.letter] = [node]
-        else:
-            self.sequence_roots[node.letter].append(node)
-        return True
-
     def get_sequence_roots(self, ch: str) -> List[LetterNode]:
         """
         @brief Get a list of the sequence roots for ch. The sequence roots
@@ -203,8 +198,7 @@ class Dictionary:
         """
         if self._add_word(word):
             # Don't recreate, that will be done on demand
-            if self.sequence_roots is not None:
-                self.sequence_roots = None
+            self.sequence_roots = None
             
             if self.root is not None:
                 self.root.build_lists()

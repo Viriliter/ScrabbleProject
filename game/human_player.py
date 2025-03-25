@@ -9,6 +9,6 @@ from .player import *
 
 class HumanPlayer(Player):
     def __init__(self, board: Board, player_privileges=PlayerPrivileges.PLAYER):
-        super().__init__(board)
+        super().__init__(board, "")
         self._player_type = PlayerType.HUMAN
         self._player_privileges = player_privileges

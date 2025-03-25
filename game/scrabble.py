@@ -49,6 +49,10 @@ class Game:
         
         self.__set_game_state(GameState.WAITING_FOR_PLAYERS)
 
+        self.__computer_player_names: List[str] = COMPUTER_PLAYER_NAMES[:]
+        random.shuffle(self.__computer_player_names)
+        self.__computer_player_count = 0
+
     def load_language(self, lang_key: LANG_KEYS) -> None:
         self.__dictionary = DictionaryWrapper(LANGUAGES[lang_key])
 
@@ -75,7 +79,12 @@ class Game:
         if player_type == PlayerType.HUMAN:
             player = HumanPlayer(self.__board)
         elif player_type == PlayerType.COMPUTER:
-            player = ComputerPlayer(self.__board)
+
+
+            COMPUTER_PLAYER_NAMES = ["Socrates", "Plato", "Aristotle", "Marx"]
+
+            player = ComputerPlayer(self.__board, self.__computer_player_names[self.__computer_player_count])
+            self.__computer_player_count += 1
         else:
             return -1
 
@@ -127,6 +136,9 @@ class Game:
 
     def get_first_player(self) -> Player:
         return None if self.__players.__len__() == 0 else self.__players[0]
+
+    def get_board(self) -> Board:
+        return self.__board
 
     def get_turn_count(self) -> int:
         return self.__turn_count

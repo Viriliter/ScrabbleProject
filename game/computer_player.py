@@ -20,4 +20,6 @@ class ComputerPlayer(Player):
         if not (self._player_state == PlayerState.PLAYING):
             return None, None
         
-        return self._board.find_best_play(self._rack.get_rack())
+        best_moves = self._board.find_best_play(self._rack.get_rack())
+        best_move: MOVE = best_moves[0]
+        return best_move.score, best_move.word

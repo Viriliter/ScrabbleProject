@@ -1,6 +1,8 @@
 import os
 import random
 import copy
+import heapq
+
 from io import BytesIO
 from typing import List, Dict, Tuple, Optional
 from deprecated import deprecated
@@ -131,6 +133,10 @@ class DictionaryWrapper:
             data = f.read()
         self.__dic.load_dawg(BytesIO(data))
 
+        #TODO Add whitelist (not applicable)
+
+        self.__dic.add_links()
+
     def has_word(self, word: str) -> bool:
         if len(word) == 0: return False
         return True if self.__dic.has_word(word) else False
@@ -201,6 +207,16 @@ class BoardContainer(np.ndarray):
             return True
         return False
 
+    def has_locked_tile(self ,row: int, col: int) -> bool:
+        # If no tile is placed, return False
+        if (self[row, col] is None):
+            return False
+        
+        # If tile is placed and locked, return True
+        if self.at(row, col).is_locked:
+            return True
+        return False
+
     def is_within_bounds(self, row: int, col: int) -> bool:
         if row < 0 or row > self.rows:
             return False
@@ -238,12 +254,13 @@ class Board:
 
         self._cross_checks: List[List[List[List[str]]]] = []
         self.best_score: int = 0
-        self.best_word: List[TILE] = []
+        self.best_moves: List[MOVE] = []
+
 
         self.clear()
 
-    def get_best_move(self):
-        return (self.best_score, self.best_word)
+    def get_best_moves(self) -> List[MOVE]:
+        return self.best_moves
 
     @property
     def rows(self):
@@ -277,6 +294,10 @@ class Board:
 
     def place_tile(self, tile: TILE) -> bool:
         if self.__cells.is_empty(tile.row, tile.col):
+            tile.is_blank = True if tile.letter == BLANK_LETTER else False
+            tile.point = self.__dictionary.get_alphabet()[tile.letter][1]
+            tile.point = 0 if tile.is_blank else tile.point
+            tile.is_locked = True
             self.__cells.set(tile.row, tile.col, tile)
             return True
         else:
@@ -582,7 +603,7 @@ class Board:
         for tile in word:
             rows.setdefault(tile.row, []).append(tile)
             cols.setdefault(tile.col, []).append(tile)
-        
+
         # If length of the word is 1, then we need to look its around to understand its direction
         if len(word) == 1:
             # Look upwards
@@ -726,7 +747,7 @@ class Board:
                     if v_is_word and h_is_seq:
                         this_cell[1].append(letter)
 
-        self._cross_checks = x_checks
+        self._cross_checks = x_checks[:]
 
     def forward(self, row: int, col: int, 
                 drow: int, dcol: int, 
@@ -742,8 +763,6 @@ class Board:
         @param tiles_played: Number of tiles played so far.
         @param current_node: Current node in the dictionary trie.
         @param word_so_far: Letters of the word formed so far.
-        @param best_score: Highest score found so far.
-        @param best_word: Highest-scoring word found so far.
         """
         # Square we're hopefully extending into
         erow = row + drow
@@ -757,12 +776,14 @@ class Board:
             score = self.score_play(row, col, drow, dcol, word_so_far, words)
             
             if score > self.best_score:
-                print("*************")
-                PRINT_WORD(self.best_word)
-                print("*************")
-                # TODO this is best score so far
+                # This is best score so far
                 self.best_score = score
-                self.best_word = word_so_far
+                heapq.heappush(self.best_moves, MOVE(score, word_so_far[:]))
+
+                print("*************")
+                print("score:", score)
+                print("word_so_far:", word_so_far)
+                print("*************")
         
         available = []  # List of letters that can be extended with
         played_tile = 0
@@ -918,7 +939,11 @@ class Board:
         
         return (best_score, best_word)
 
-    def find_best_play(self, rack_letters: List[LETTER]) -> Tuple[int, WORD]:
+    def find_best_play(self, rack_letters: List[LETTER]) -> List[MOVE]:
+        self.best_moves.clear()
+        self.best_score = 0
+        self._cross_checks.clear()
+
         # Convert list of letters to list of tiles
         rack_tiles: List[TILE] = []
         for letter in rack_letters:
@@ -965,7 +990,6 @@ class Board:
 
         if not anchored:
             best_score, best_word = self.best_opening_play(rack_tiles)
+            return [ MOVE(best_score, best_word) ]
         else:
-            return self.get_best_move()
-        
-        return best_score, best_word
+            return self.get_best_moves()
