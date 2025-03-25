@@ -11,6 +11,7 @@ class TestBoard(unittest.TestCase):
     def setUp(self):
         language = LANGUAGES['ENG']
         self.dict = DictionaryWrapper(language)
+        self.dict.load_language(LANGUAGE(ALPH_ENGLISH, "dictionaries/Oxford_5000.dict"))
     
     def test_find_best_play(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)

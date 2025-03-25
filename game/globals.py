@@ -217,8 +217,8 @@ def PRINT_WORD(word: WORD) -> None:
         temp_word = sorted(temp_word, key=lambda tile: tile.row)
         positions = rows
     else:
-        direction = 'mixed'
-        assert True, ("Tiles are not aligned. It is not a word")
+        print(("Tiles are not aligned. It is not a word"))
+        return
     
     # Print the sorted tiles in the determined direction
     result = ""
@@ -315,5 +315,5 @@ class LANG_KEYS:
     ENG = "ENG"
     TUR = "TUR"
 
-LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "dictionaries/Oxford_5000.dict"),
+LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "dictionaries/CSW2021_English.dict"),
                                         LANG_KEYS.TUR: LANGUAGE(ALPH_TURKISH, "dictionaries/British_English.dict")}

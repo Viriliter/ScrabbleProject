@@ -121,6 +121,16 @@ class DictionaryWrapper:
             data = f.read()
         self.__dic.load_dawg(BytesIO(data))
 
+    def load_language(self, language: LANGUAGE) -> None:
+        self.__alphabet: ALPHABET = language.alphabet.copy()
+        self.__uri: str = get_absolute_path(language.uri)
+
+        self.__dic = Dictionary("myDictionary")
+
+        with open(os.path.join(os.path.dirname(__file__), 'data', self.__uri), 'rb') as f:
+            data = f.read()
+        self.__dic.load_dawg(BytesIO(data))
+
     def has_word(self, word: str) -> bool:
         if len(word) == 0: return False
         return True if self.__dic.has_word(word) else False
@@ -226,7 +236,7 @@ class Board:
         self.__cells = BoardContainer(self.__row, self.__col)  # [['' for _ in range(self.__col)] for _ in range(self.__row)]
         self.__special_cells = copy.deepcopy(special_cells)
 
-        self._cross_checks = []
+        self._cross_checks: List[List[List[List[str]]]] = []
         self.best_score: int = 0
         self.best_word: List[TILE] = []
 
@@ -551,7 +561,7 @@ class Board:
     def intersection(a: List[str], b: List[str]) -> List[str]:
         return [letter for letter in a if letter in b]
 
-    def is_anchor(self, row, col) -> bool:
+    def is_anchor(self, row: int, col: int) -> bool:
         """
         Unlike Appel and Jacobsen, who anchor plays on empty squares,
         we anchor plays on a square with a tile that has an adjacent
@@ -660,7 +670,7 @@ class Board:
         horizontal or vertical cross word.
         @param available: set of available letters
         """
-        x_checks = []
+        x_checks: List[List[List[List[str]]]] = []
 
         for col in range(self.cols):
             this_col = []
@@ -806,8 +816,6 @@ class Board:
         @param anchor_node: Starting dictionary node for backing up
         @param d_node: Current dictionary node
         @param word_so_far: List of tiles forming the current word in reverse order
-        @param best_score: Highest score found so far.
-        @param best_word: Highest-scoring word found so far.
         """
         # Square we're hopefully extending into
         erow = row - drow
