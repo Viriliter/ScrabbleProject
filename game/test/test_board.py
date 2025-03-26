@@ -12,7 +12,7 @@ class TestBoard(unittest.TestCase):
     
     @measure_time
     def test_serialize_words_horizontal(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'ASTRONOMY': [TILE(0, 0, 'A'),TILE(0, 1, 'S'),TILE(0, 2, 'T'),TILE(0, 3, 'R'),TILE(0, 4, 'O'),TILE(0, 5, 'N'),TILE(0, 6, 'O'),TILE(0, 7, 'M'),TILE(0, 8, 'Y')],
@@ -27,7 +27,7 @@ class TestBoard(unittest.TestCase):
     
     @measure_time
     def test_serialize_words_verticals(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'PYTHON': [TILE(0, 0, 'P'),TILE(1, 0, 'Y'),TILE(2, 0, 'T'),TILE(3, 0, 'H'),TILE(4, 0, 'O'),TILE(5, 0, 'N')],
@@ -42,7 +42,7 @@ class TestBoard(unittest.TestCase):
 
     @measure_time
     def test_validate_words_horizontals(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'ASTRONOMY': [TILE(0, 0, 'A'),TILE(0, 1, 'S'),TILE(0, 2, 'T'),TILE(0, 3, 'R'),TILE(0, 4, 'O'),TILE(0, 5, 'N'),TILE(0, 6, 'O'),TILE(0, 7, 'M'),TILE(0, 8, 'Y')],
@@ -58,7 +58,7 @@ class TestBoard(unittest.TestCase):
     
     @measure_time
     def test_validate_words_verticals(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'PYTHON': [TILE(0, 0, 'P'),TILE(1, 0, 'Y'),TILE(2, 0, 'T'),TILE(3, 0, 'H'),TILE(4, 0, 'O'),TILE(5, 0, 'N')],
@@ -74,7 +74,7 @@ class TestBoard(unittest.TestCase):
 
     @measure_time
     def test_validate_words_diagonal(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'PYTHON': [TILE(0, 0, 'P'),TILE(1, 1, 'Y'),TILE(2, 2, 'T'),TILE(3, 3, 'H'),TILE(4, 4, 'O'),TILE(5, 5, 'N')],
@@ -90,7 +90,7 @@ class TestBoard(unittest.TestCase):
 
     @measure_time
     def test_calculate_points_horizontal(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'ASTRONOMY': ([TILE(0, 0, 'A'),TILE(0, 1, 'S'),TILE(0, 2, 'T'),TILE(0, 3, 'R'),TILE(0, 4, 'O'),TILE(0, 5, 'N'),TILE(0, 6, 'O'),TILE(0, 7, 'M'),TILE(0, 8, 'Y')], 135),
@@ -105,7 +105,7 @@ class TestBoard(unittest.TestCase):
 
     @measure_time
     def test_calculate_points_vertical(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'PYTHON': ([TILE(0, 0, 'P'),TILE(1, 0, 'Y'),TILE(2, 0, 'T'),TILE(3, 0, 'H'),TILE(4, 0, 'O'),TILE(5, 0, 'N')], 54),
@@ -120,7 +120,7 @@ class TestBoard(unittest.TestCase):
 
     @measure_time
     def test_calculate_points_diagonal(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'PYTHON': ([TILE(0, 0, 'P'),TILE(1, 1, 'Y'),TILE(2, 2, 'T'),TILE(3, 3, 'H'),TILE(4, 4, 'O'),TILE(5, 5, 'N')], 0),
@@ -135,7 +135,7 @@ class TestBoard(unittest.TestCase):
     
     @measure_time
     def test_calculate_points_complex(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         word_list = {
             'ASTRONOMY': ([TILE(4 , 7 , 'A'),TILE(5 , 7 , 'S'),TILE(6 , 7 , 'T'),TILE(7 , 7 , 'R'),TILE(8, 7, 'O'),TILE(9, 7, 'N'),TILE(10, 7, 'O'),TILE(11, 7, 'M'),TILE(12, 7, 'Y')],  34),
@@ -157,7 +157,7 @@ class TestBoard(unittest.TestCase):
             self.assertEqual(points, exp_score, f"Failed for word: {expected}")
     
     def test_load_from_string(self):
-        board = Board(self.dict, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
         expected_output = ""
         expected_output += "     A  B  C  D  E  F  G  H  I  J  K  L  M  N  O\n"
@@ -180,7 +180,7 @@ class TestBoard(unittest.TestCase):
         expected_output += "   +----------------------------------------------+\n"
 
         board.deserialize(expected_output)
-        result = board.serialize2str()
+        result = board.stringify()
         
         self.assertEqual(expected_output, result, f"Failed")
 

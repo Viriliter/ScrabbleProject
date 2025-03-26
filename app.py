@@ -12,14 +12,14 @@ from flask import Flask, render_template, Response, request, url_for, flash, red
 from flask_socketio import SocketIO, emit
 from werkzeug.exceptions import abort
 
-from game import PlayerMeta, PlayerType, PlayerState, GameMeta,  GameState, Game, verbalize
+from game import PlayerMeta, PlayerType, PlayerState, GameState, Scrabble, verbalize
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "admin"
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # This container holds all game sessions in the server
-games: List[Game] = []
+games: List[Scrabble] = []
 
 GAME_CLEAN_INTERVAL = 10  # in seconds
 
@@ -34,18 +34,28 @@ def clean_games() -> None:
 
     threading.Timer(GAME_CLEAN_INTERVAL, clean_games).start()  # Run every 10 seconds
 
-def create_game(player_count: int) -> Game:
-    game = Game(socketio, player_count)
+def create_game(player_types: int) -> Scrabble:
+    game = Scrabble(socketio, len(player_types))
+    
+    # Create computer players 
+    for player_type in player_types:
+        if player_type == "COMPUTER":
+            player_id = game.create_player(PlayerType.COMPUTER)
+            if player_id is None:
+                return None
+        else:
+            continue
+
     games.append(game)
     return game
 
-def get_game(game_id: str) -> Game:
+def get_game(game_id: str) -> Scrabble:
     for game in games:
         if game.get_game_id() == game_id:
             return game
     return None
 
-def update_lobby(game: Game) -> None:
+def update_lobby(game: Scrabble) -> None:
     players_meta: List[PlayerMeta] = game.get_players_meta()
     # Emit the notification to all connected clients
     socketio.emit('update-lobby', {"playersMeta": [player.__dict__ for player in players_meta]})
@@ -70,10 +80,10 @@ def handle_connect():
     game_id, player_id = extract_url(path)
     if game_id is None or player_id is None:
         return
-    print(sid, type(sid))
+
     game = get_game(game_id)
     game.add_sid(sid, player_id)
-    print(f"Player {player_id} joined Game {game_id} (SID: {sid})")
+    print(f"APP >>> Player {player_id} joined Game {game_id} (SID: {sid})")
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -86,7 +96,7 @@ def handle_disconnect():
 
     game = get_game(game_id)
     game.remove_sid(sid, player_id)
-    print(f"Player {player_id} disconnected from Game {game_id} (SID: {sid})")
+    print(f"APP >>> Player {player_id} disconnected from Game {game_id} (SID: {sid})")
 
 # Home Page
 
@@ -105,19 +115,18 @@ def create_new_game() -> Response:
 
     player_types = request_json if isinstance(request_json, list) else []
 
-    game = create_game(player_types.__len__())
+    game = create_game(player_types)
+    if game is None:
+        return jsonify({"status": "error", "message": "Cannot create the game (invalid number players maybe?)"}), 400
+
     game_id = game.get_game_id()
 
+    # First player is always admin
+    player_id = game.create_player(player_types[0])
+    if player_id is None:
+        return jsonify({"status": "error", "message": "Cannot create the player"}), 400
+    
     admin_player_id = -1
-
-    player_type = player_types[0]
-    if player_type == "COMPUTER":
-        player_id = game.create_player(PlayerType.COMPUTER)
-    elif player_type == "HUMAN":
-        player_id = game.create_player(PlayerType.HUMAN)
-    else:
-        return jsonify({"status": "error", "message": "Invalid player type"}), 400
-
     if not game.is_game_has_admin():
         game.found_player(player_id).set_as_admin()
         admin_player_id = player_id
@@ -206,7 +215,7 @@ def ready_user() -> Response:
 
         player = game.found_player(player_id)
         if player is not None:
-            player.set_player_state(PlayerState.READY)
+            player.set_player_state(PlayerState.LOBBY_READY)
             return jsonify({"status": "success"}), 200
         else:
             return jsonify({"status": "error", "message": "Player not found"}), 404 
@@ -221,7 +230,7 @@ def enter_game() -> Response:
     game_id = request_json["gameID"]
     player_id = request_json["playerID"]
 
-    print(f"Player trying to enter game (Game ID: {game_id}, Player ID: {player_id})")
+    print(f"APP >>> Player trying to enter game (Game ID: {game_id}, Player ID: {player_id})")
 
     game = get_game(game_id)
     if game is None:
@@ -253,13 +262,13 @@ def get_player_name(game_id: str, player_id: str) -> Response:
     player = game.found_player(player_id)
     if player is None:
         return jsonify({"status": "error", "message": "Player could not be found"}), 404
-    print(f"Stored player name {player.get_player_name()} for id of {player_id}")
+    print(f"APP >>> Stored player name {player.get_player_name()} for id of {player_id}")
     return jsonify({"status": "success", "playerName": player.get_player_name()}), 200
 
 @app.route("/game/<game_id>/<player_id>/request-update", methods=["POST"])
 def request_update(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
-    print(f'Update requested by Player: {player_id}')
+    print(f'APP >>> Update requested by Player: {player_id}')
 
     if game is not None:
         game.update_clients()
@@ -272,7 +281,7 @@ def request_order(game_id: str, player_id: str) -> Response:
     if game is None:
         return jsonify({"status": "error", "message": "Game could not found"}), 404
 
-    print(f'Order requested by Player: {player_id}')
+    print(f'APP >>> Order requested by Player: {player_id}')
     letter = game.request_play_order(player_id)
     if letter is not None:
         return jsonify({"status": "success", "letter": letter}), 200
@@ -285,7 +294,7 @@ def request_rack(game_id: str, player_id: str) -> Response:
     if game is None:
         return jsonify({"status": "error", "message": "Game could not found"}), 404
 
-    print(f'Rack requested by Player: {player_id}')
+    print(f'APP >>> Rack requested by Player: {player_id}')
     player = game.found_player(player_id)
     if player is None:
         return jsonify({"status": "error", "message": "Player could not be found"}), 404
@@ -308,17 +317,17 @@ def verify_word(game_id: str, player_id: str) -> Response:
     if not game_id or not player_id or len(tiles) == 0:
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
 
-    print(f'Word verifing for Player: {player_id}')
+    print(f'APP >>> Word verifing for Player: {player_id}')
 
     # Print each tile's properties
     for tile in tiles:
-        print(f"Letter: {tile['letter']}, ID: {tile['tileID']}, Location: {tile['location']}")
+        print(f"(Letter: {tile['letter']}, ID: {tile['tileID']}, Location: {tile['location']})", end=" ")
+    print("")
 
     game = get_game(game_id)
     if game is not None:
         word = verbalize(tiles)
-        for tile in word:
-            print(f"Letter: {tile.letter}, row: {tile.row}, col: {tile.col}")
+        print(f"APP >>> Verbalized Word Letter: {word}")
 
         calculated_points = game.verify_word(word)
         if calculated_points > 0:
@@ -364,7 +373,7 @@ def skip_turn(game_id: str, player_id: str) -> Response:
 @app.route("/game/<game_id>/<player_id>/submit", methods=["POST"])
 def submit(game_id: str, player_id: str) -> Response:
     request_json = request.get_json()
-    print(f'Word submitted by Player: {player_id}')
+    print(f'APP >>> A word is about to be submitted by Player: {player_id}')
 
     if request_json is None:
         return jsonify({"status": "error", "message": "Invalid request"}), 400

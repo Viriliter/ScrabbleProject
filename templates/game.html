@@ -309,6 +309,12 @@ socket.on('update-rack', function(data) {
     //updateMyRack(data.racks);
 });
 
+socket.on('game-message', function(data) {
+    console.log('game-message::::');
+    showGameMessage(data);
+});
+
+
 function getUrlParams() {
     const path = window.location.pathname;
     const pathParts = path.split('/');

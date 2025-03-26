@@ -50,7 +50,7 @@ class CT:
     TRIPLE_WORD = 4
 
 # (CellLocation, CellType)
-SPECIAL_CELLS: Dict[CL, CT] = {
+PREMIUM_CELLS: Dict[CL, CT] = {
     CL(0,0):    CT.TRIPLE_WORD,
     CL(0,7):    CT.TRIPLE_WORD,
     CL(0,14):   CT.TRIPLE_WORD,
@@ -119,13 +119,13 @@ LETTER = str
 
 @final
 class TILE:
-    def __init__(self, row: int, col: int, letter: str, point=-1, is_blank=False, is_locked=False):
+    def __init__(self, row: int=-1, col: int=-1, letter: str="", point=-1, is_blank=False, is_locked=False):
         self._row = row
         self._col = col
         self._letter = letter
-        self._is_blank = is_blank
+        self._is_blank = True if letter==BLANK_LETTER else is_blank
         self._is_locked = is_locked
-        self._point = point
+        self._point = ALPH_ENGLISH[letter][1] if point == -1 else point
 
     @property
     def row(self) -> int:
@@ -174,6 +174,19 @@ class TILE:
     @point.setter
     def point(self, point: int) -> None:
         self._point = point
+
+    def is_equal(self, other: 'TILE') -> bool:
+        """
+        @brief: Check if the tiles are at same location and have same letter
+        """
+        return (self.row == other.row and self.col == other.col and 
+                self.letter == other.letter and self.is_blank == other.is_blank)
+
+    def is_similar(self, other: 'TILE') -> bool:
+        """
+        @brief: Check if the tiles have same letter an is_blank
+        """
+        return (self.letter == other.letter and self.is_blank == other.is_blank)
 
     def __iter__(self):
         for key in self.__dict__:

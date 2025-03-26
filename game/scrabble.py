@@ -10,23 +10,19 @@ from .globals import *
 from .utils import *
 from .player import *
 from .components import *
-
-class GameState:
-    UNDEFINED               = 0  # Initial state
-    WAITING_FOR_PLAYERS     = 1  # Waiting for players to join the game
-    PLAYER_ORDER_SELECTION  = 2  # Players are selecting the order of play
-    GAME_STARTED            = 3  # Game has started
-    GAME_OVER               = 4  # Game is over
+from .observer import Subject
+from .enums import *
 
 @dataclass(frozen=True)
 class GameMeta:
     GAME_ID: str
     GAME_STATE: GameState
 
-class Game:
+class Scrabble(Subject):
     default_lang = LANG_KEYS.ENG
 
     def __init__(self, socketio: SocketIO, player_count=MIN_PLAYER_COUNT):
+        super().__init__()
         self.__socketio = socketio
         self.__connected_clients: Dict[str, str] = {}
 
@@ -53,13 +49,20 @@ class Game:
         random.shuffle(self.__computer_player_names)
         self.__computer_player_count = 0
 
+    # Getter and Setter for Game Properties
+
+    def __set_game_state(self, state: GameState):
+        print(f'Game {self.__game_id} State: {GameState.to_string(self.__game_state)} -> {GameState.to_string(state)}')
+        self.__game_state = state
+        self.__update()
+
     def load_language(self, lang_key: LANG_KEYS) -> None:
         self.__dictionary = DictionaryWrapper(LANGUAGES[lang_key])
 
         self.__tile_bag = TileBag()
         self.__tile_bag.load(self.__dictionary.get_alphabet())
 
-        self.__board = Board(self.__dictionary, BOARD_ROW, BOARD_COL, SPECIAL_CELLS)
+        self.__board = Board(self.__dictionary, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 
     def get_game_id(self) -> str:
         return self.__game_id
@@ -67,32 +70,44 @@ class Game:
     def get_game_state(self) -> GameState:
         return self.__game_state
 
-    def __set_game_state(self, state: GameState):
-        print('__set_game_state', self.__game_state, state)
-        self.__game_state = state
-        self.update()
+    def generate_computer_player_name(self) -> str:
+        if self.__computer_player_count >= len(self.__computer_player_names):
+            return ""
+        
+        name = self.__computer_player_names[self.__computer_player_count]     
+        self.__computer_player_count += 1
+        return name
 
-    def create_player(self, player_type=PlayerType.HUMAN) -> str:
+    def create_player(self, player_type=PlayerType.HUMAN) -> Optional[str]:
         if (self.__active_player_count >= self.__player_count):
-            return -1
+            return None
         
         if player_type == PlayerType.HUMAN:
             player = HumanPlayer(self.__board)
         elif player_type == PlayerType.COMPUTER:
-
-
-            COMPUTER_PLAYER_NAMES = ["Socrates", "Plato", "Aristotle", "Marx"]
-
-            player = ComputerPlayer(self.__board, self.__computer_player_names[self.__computer_player_count])
-            self.__computer_player_count += 1
+            player = ComputerPlayer(self.__board, self.__tile_bag, self.generate_computer_player_name())
+            print(f"Player {player.get_player_id()} picked its name as {player.get_player_name()}.")
         else:
-            return -1
+            return None
 
         if not (player_type == PlayerPrivileges.REFEREE):
             self.__players.append(player)
             self.__active_player_count += 1
 
+        self.attach(player)  # Attach the player to the observer list
+        print(f"A new player with id of {player.get_player_id()} created.")
+
         return player.get_player_id()
+
+    def kick_player(self, player_id: str) -> bool:
+        player = self.found_player(player_id)
+        if player is None:
+            return False
+        else:
+            self.detach(player)
+            self.__players.remove(player)
+            self.__active_player_count -= 1
+            return True
 
     def set_player_as_admin(self, player_id: str) -> bool:
         for player in self.__players:
@@ -150,7 +165,7 @@ class Game:
         if self.__players.__len__() == 0: return False
 
         for player in self.__players:
-            if not player.get_player_state() == PlayerState.READY:
+            if not player.get_player_state() == PlayerState.LOBBY_READY:
                 return False
         return True
 
@@ -163,7 +178,10 @@ class Game:
     def is_game_started(self) -> bool:
         return self.get_game_state() == GameState.GAME_STARTED
     
+    # Player Actions
+
     def withdraw_player(self, player_id: str) -> bool:
+        print(f"Player {player_id} is about to withdraw from the game.")
         player = self.found_player(player_id)
         if player is None:
             return False
@@ -177,6 +195,7 @@ class Game:
             return True
     
     def enter_player_to_game(self, player_id: str) -> bool:
+        print(f"Player {player_id} is about to enter the game.")
         player = self.found_player(player_id)
         if player is None:
             return False
@@ -197,15 +216,19 @@ class Game:
         return True
 
     def request_play_order(self, player_id: str) -> LETTER:
+        print(f"Player {player_id} is about to request play order.")
         player = self.found_player(player_id)
         if player is None: return None
 
         # Player cannot request order again if it has already requested        
         if player.is_order_requested():
+            print(f"Player {player_id} has already requested order, cannot request again.")
             return None
 
         letter = self.__tile_bag.pick_letter_for_order()
-        if letter is None: return None
+        if letter is None:
+            print(f"Player {player_id} cannot pick letter")
+            return None
 
         order = ord(letter) - ord('A') + 1
         player.set_play_order(order)
@@ -214,11 +237,97 @@ class Game:
 
         player.set_player_state(PlayerState.WAITING)
         
-        self.update()
+        self.__update()
 
-        print(player_id, letter)
-
+        print(f"Player {player_id} picked letter {letter} for order")
+ 
         return letter
+
+    def verify_word(self, word: WORD) -> int:
+        points = self.__board.calculate_points(word)
+
+        return points
+
+    def submit(self, player_id: str, word: WORD) -> int:
+        print(f"Player {player_id} is about to submit the word: {word}")
+        if self.__game_state != GameState.GAME_STARTED:
+            return 0
+        
+        player = self.found_player(player_id)
+        if player is None:
+            return 0
+
+        # Only current player submit its word
+        if not (player.get_player_id() == self.__currentPlayer.get_player_id()):
+            return 0
+
+        points = self.verify_word(word)
+
+        # If the word is valid then its points will be greater than 0
+        if points > 0:
+            player.add_points(points)
+
+            # Place the word on the board
+            self.__board.place_word(word)
+
+            # Remove the tiles from the player's rack
+            letter_count = word.__len__()
+            for tile in word:
+                player.remove_from_rack(tile)
+
+            # Refill the rack of the player
+            for _ in range(letter_count):
+                newTile = self.__tile_bag.get_random_tile()
+                player.add_tile(newTile)
+
+            # Finish the turn
+            self.next_turn()  # Update the turn count and set the next player
+            self.__update()  # Update game state machine 
+        
+        self.update_clients()  # Notify all clients about the changes
+
+        return points
+
+    def next_turn(self) -> Player:
+        """
+        @brief Calculate the point of the player's word and pass the turn to the next player
+
+        @param word: The player id
+        @return: The player who will play next
+        """
+        self.__currentPlayer.set_player_state(PlayerState.WAITING)
+        self.__turn_count = (self.__turn_count + 1) % self.__players.__len__()
+        self.__currentPlayer = self.__players[self.__turn_count]
+        self.__currentPlayer.set_player_state(PlayerState.PLAYING)
+        return self.__currentPlayer
+
+    def skip_turn(self, player_id: str) -> Player:
+        """
+        @brief Skip the turn of the current player
+        
+        @param player_id: The player id
+        @return: The player who will play next
+        """
+        print(f"Player {player_id} is about to skip the turn.")
+        player = self.found_player(player_id)
+        if player is None: return None
+        if not (player.get_player_state() == PlayerState.PLAYING): return None
+
+        self.next_turn()
+        self.__update()
+        self.send_message_to_clients("Player " + player.get_player_name() + " has skipped the turn.")
+        return self.__currentPlayer
+    
+    def get_winner(self) -> Player:
+        max_points = 0
+        winner = None
+        for player in self.__players:
+            if player.get_points() > max_points and player.is_active():
+                max_points = player.get_points()
+                winner = player
+        return winner
+
+    # Internal Game Actions
 
     def __on_waiting_for_players(self):
         # Check if all players are ready
@@ -230,7 +339,6 @@ class Game:
 
         # Check if all players have selected their order
         for player in self.__players:
-            print(player.get_player_state(), PlayerState.WAITING)
             if (player.get_player_state() < PlayerState.WAITING):
                 return
         print('Game has been started!!!!!!!!!!!!!')
@@ -238,7 +346,7 @@ class Game:
 
     def __on_game_started(self):
         # Check if game is over
-        if self.check_game_over():
+        if self.__check_game_over():
             self.__set_game_state(GameState.GAME_OVER)
         else:
             # At the very beginning of the game
@@ -268,7 +376,7 @@ class Game:
     def __on_game_over(self):
         pass
     
-    def update(self) -> None:
+    def __update(self) -> None:
         if self.__game_state == GameState.WAITING_FOR_PLAYERS:
             self.__on_waiting_for_players()
         elif self.__game_state == GameState.PLAYER_ORDER_SELECTION:
@@ -281,71 +389,9 @@ class Game:
             raise ValueError("Invalid game state")
 
         self.update_clients()
+        self.notify_all(self.__game_state)  # Notify all players about the game state
 
-    def verify_word(self, word: WORD) -> int:
-        points = self.__board.calculate_points(word)
-
-        return points
-
-    def submit(self, player_id: str, word: WORD) -> int:
-        if self.__game_state != GameState.GAME_STARTED:
-            return 0
-        
-        player = self.found_player(player_id)
-        if player is None:
-            return 0
-
-        # Only current player submit its word
-        if not (player.get_player_id() == self.__currentPlayer.get_player_id()):
-            return 0
-
-        points = self.verify_word(word)
-
-        if points > 0:
-            player.add_points(points)
-            
-            letter_count = word.__len__()
-            for letter in word:
-                player.remove_from_rack(letter.letter)
-
-            self.__board.place_word(word)
-
-            for _ in range(letter_count):
-                newLetter = self.__tile_bag.get_random_letter()
-                player.add_to_rack(newLetter)
-
-            self.next_turn()
-            self.update()
-
-        return points
-
-    def next_turn(self) -> Player:
-        """
-        @brief Calculate the point of the player's word and pass the turn to the next player
-
-        @param word: The player id
-        @return: The player who will play next
-        """
-        self.__turn_count = (self.__turn_count + 1) % self.__players.__len__()
-        self.__currentPlayer = self.__players[self.__turn_count]
-        return self.__currentPlayer
-
-    def skip_turn(self, player_id: str) -> Player:
-        """
-        @brief Skip the turn of the current player
-        
-        @param player_id: The player id
-        @return: The player who will play next
-        """
-        player = self.found_player(player_id)
-        if player is None: return None
-        if not (player.get_player_state() == PlayerState.PLAYING): return None
-
-        self.__turn_count = (self.__turn_count + 1) % self.__players.__len__()
-        self.__currentPlayer = self.__players[self.__turn_count]
-        return self.__currentPlayer
-    
-    def check_game_over(self) -> bool:
+    def __check_game_over(self) -> bool:
         if (self.get_game_state() == GameState.GAME_OVER):
             return True
         # If game has not been started yet game is not over
@@ -369,14 +415,7 @@ class Game:
         
         return False
 
-    def get_winner(self) -> Player:
-        max_points = 0
-        winner = None
-        for player in self.__players:
-            if player.get_points() > max_points and player.is_active():
-                max_points = player.get_points()
-                winner = player
-        return winner
+    # Remote Client Actions
 
     def add_sid(self, sid: str, player_id: str) -> None:
         self.__connected_clients[sid] = player_id
@@ -395,3 +434,6 @@ class Game:
             player = self.found_player(player_id)
             if player is not None:
                 self.__socketio.emit("update-racks", {"racks": player.get_serialized_rack()}, to=sid)
+
+    def send_message_to_clients(self, message: str) -> None:
+        self.__socketio.emit('game-message', {"message": message})

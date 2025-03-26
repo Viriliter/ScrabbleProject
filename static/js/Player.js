@@ -1,7 +1,7 @@
 const PlayerState = {
     UNDEFINED:      0,   // The player has not been initialized yet
-    NOT_READY:      1,   // The player has entered lobby screen but not clicked the ready button yet
-    READY:          2,   // After player has clicked the ready button on lobby screen
+    LOBBY_WAITING:  1,   // The player has entered lobby screen but not clicked the ready button yet
+    LOBBY_READY:    2,   // After player has clicked the ready button on lobby screen
     WAITING_ORDER:  3,   // Player is waiting to be ordered 
     WAITING:        4,   // Player is waiting for its next turn to play
     PLAYING:        5,   // Player is playing its turn

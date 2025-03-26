@@ -67,7 +67,7 @@ function updateLobby(playersMeta_) {
             playerContainer.appendChild(adminIndicator);
         }
 
-        if (player_.PLAYER_STATE == PlayerState.READY) {
+        if (player_.PLAYER_STATE == PlayerState.LOBBY_READY) {
             const readyIndicator = document.createElement('span');
             readyIndicator.style.margin = '10px';
             readyIndicator.style.background = 'var(--cell-color)';

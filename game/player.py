@@ -1,30 +1,12 @@
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
+from game.enums import *
+from game.observer import Observer
+
 from .globals import *
 from .utils import *
 from .components import *
-
-class PlayerType:
-    UNDEFINED = "UNDEFINED"
-    COMPUTER = "COMPUTER"
-    HUMAN = "HUMAN"
-
-class PlayerPrivileges:
-    UNDEFINED = 0   # N/A
-    ADMIN = 1       # ADMIN is the player who creates the game
-    PLAYER = 2      # PLAYER is ordinary 
-    REFEREE = 3     # REFEREE does not join the game just watches players' action
-
-class PlayerState:
-    UNDEFINED       = 0   # The player has not been initialized yet
-    NOT_READY       = 1   # The player has entered lobby screen but not clicked the ready button yet
-    READY           = 2   # After player has clicked the ready button on lobby screen
-    WAITING_ORDER   = 3   # Player is waiting to be ordered 
-    WAITING         = 4   # Player is waiting for its next turn to play
-    PLAYING         = 5   # Player is playing its turn
-    WON             = 6   # Player has won the game
-    LOST            = 7   # Player has lost the game
 
 @dataclass(frozen=True)
 class PlayerMeta:
@@ -36,8 +18,9 @@ class PlayerMeta:
     PLAY_ORDER: int
     PLAYER_POINTS: int
 
-class Player:
+class Player(Observer):
     def __init__(self, board: Board, name: str):
+        super().__init__()
         self._board = board
         self._player_id: str = generate_unique_id()
         self._player_name: str = name
@@ -53,6 +36,8 @@ class Player:
         # Create game components
         self._rack = Rack()
 
+        self.set_player_state(PlayerState.LOBBY_WAITING)  # Created player waits in the lobby
+
     def set_as_admin(self) -> None:
         self._player_privileges = PlayerPrivileges.ADMIN
 
@@ -67,6 +52,7 @@ class Player:
             return False
 
     def set_player_state(self, player_state: PlayerState) -> None:
+        print(f'Player ({self._player_id}) State:  {PlayerState.to_string(self._player_state)} -> {PlayerState.to_string(player_state)}')
         self._player_state = player_state
 
     def get_player_state(self) -> PlayerState:
@@ -124,7 +110,7 @@ class Player:
         return self._skip_count
     
     def enter_game(self, tile_bag: TileBag) -> None:
-        self._player_state = PlayerState.READY
+        self._player_state = PlayerState.LOBBY_READY
 
     def widthdraw(self) -> None:
         self._player_state = PlayerState.LOST
@@ -137,17 +123,17 @@ class Player:
     def get_serialized_rack(self) -> Dict[LETTER, int]:
         return self._rack.serialize()
 
-    def remove_from_rack(self, letter: LETTER) -> None:
-        self._rack.remove_from_rack(letter)
-
-    def add_to_rack(self, letter: LETTER) -> None:
-        self._rack.add_to_rack(letter)
+    def remove_from_rack(self, tile: TILE) -> None:
+        self._rack.remove_tile(tile)
 
     def initialize_rack(self, tile_bag: TileBag) -> None:
         self._rack.clear()
         for _ in range(INITIAL_TILE_COUNT):
-            self._rack.add_to_rack(tile_bag.get_random_letter())
+            self._rack.add_tile(tile_bag.get_random_tile())
 
-    def add_tiles(self, tiles: List[LETTER]) -> None:
+    def add_tile(self, tile: TILE) -> None:
+        self._rack.add_tile(tile)
+
+    def add_tiles(self, tiles: List[TILE]) -> None:
         for tile in tiles:
-            self._rack.add_to_rack(tile)
+            self._rack.add_tile(tile)

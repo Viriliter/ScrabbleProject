@@ -741,3 +741,8 @@ function updateMyRack(racks_) {
         }
     });
 }
+
+function showGameMessage(data) {
+    alert('Message: ' + data.message);
+
+}

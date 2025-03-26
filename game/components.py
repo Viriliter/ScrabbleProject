@@ -38,7 +38,7 @@ class TileBag:
                 self.__tiles[letter] = (count, points)
             self.__remaning_tiles += count
 
-    def get_random_letter(self) -> LETTER:
+    def get_random_tile(self) -> TILE:
         if self.__remaning_tiles == 0:
             return None  # Bag is empty
         
@@ -53,7 +53,9 @@ class TileBag:
             del self.__tiles[letter]  # Remove letter if no more left
         
         self.__remaning_tiles -= 1
-        return letter
+
+        is_blank = True if letter == BLANK_LETTER else False
+        return TILE(-1, -1, letter, points, is_blank, False)
 
     def put_back_letter(self, letter: LETTER) -> None:
         if letter in self.__tiles:
@@ -75,26 +77,39 @@ class TileBag:
         self.__picked_letters.append(letter)
         return letter
 
+    def get_alphabet(self) -> ALPHABET:
+        return self.__reference_tiles
+
 class Rack:
     def __init__(self):
-        self.__container: List[LETTER] = []
+        self.__container: List[TILE] = []
         
-    def add_to_rack(self, letter: LETTER) -> None:
-        self.__container.append(letter)
+    def add_letter(self, letter: LETTER, alphabet: ALPHABET=None) -> None:
+        is_blank = True if letter == BLANK_LETTER else False
+        point = alphabet[letter][1] if alphabet is not None else 0
+        point = 0 if is_blank else point
+        tile = TILE(letter=letter, is_blank=is_blank, point=point, is_locked=False)
+        self.__container.append(tile)
 
-    def remove_from_rack(self, letter: LETTER) -> None:
-        self.__container.remove(letter)
+    def add_tile(self, tile: TILE) -> None:
+        self.__container.append(tile)
+
+    def remove_tile(self, tile: TILE) -> None:
+        for i, t in enumerate(self.__container):
+            if t.is_similar(tile):
+                self.__container.remove(t)
+                break
 
     def get_rack_length(self) -> int:
         return self.__container.__len__()
 
     def serialize(self) -> Dict[LETTER, int]:
         letter_counts = {}
-        for letter in self.__container:
-            if letter in letter_counts:
-                letter_counts[letter] += 1
+        for tile in self.__container:
+            if tile.letter in letter_counts:
+                letter_counts[tile.letter] += 1
             else:
-                letter_counts[letter] = 1
+                letter_counts[tile.letter] = 1
         return letter_counts
 
     def clear(self) -> None:
@@ -108,9 +123,22 @@ class Rack:
         copy_container.sort(key=lambda x: ord(x), reverse=reverse)
         return copy_container
 
-    def get_rack(self) -> List[LETTER]:
+    def get_rack(self) -> List[TILE]:
         copy_container = copy.deepcopy(self.__container)
         return copy_container
+
+    def get_letters(self) -> List[TILE]:
+        letters = []
+        for tile in self.__container:
+            letters.append(tile.letter)
+
+        return letters
+
+    def stringify(self) -> str:
+        """
+        @brief Serializes the rack to string (for debugs)
+        """
+        return str(self.__container)
 
 class DictionaryWrapper:
     def __init__(self, language: LANGUAGE):
@@ -202,6 +230,11 @@ class BoardContainer(np.ndarray):
     def set(self, row: int, col: int, value: Optional[TILE]) -> None:
         self[row, col] = value
 
+    def pop(self, row: int, col: int) -> Optional[TILE]:
+        value = self[row, col]
+        self[row, col] = None
+        return value
+
     def is_empty(self, row: int, col: int) -> bool:
         if (self[row, col] is None):
             return True
@@ -245,12 +278,12 @@ class Board:
                  dictionary: DictionaryWrapper,
                  row=BOARD_ROW,
                  col=BOARD_COL, 
-                 special_cells: Dict[CL, CT]=SPECIAL_CELLS):
+                 premium_cells: Dict[CL, CT]=PREMIUM_CELLS):
         self.__dictionary: DictionaryWrapper = dictionary
         self.__row: int = row
         self.__col: int = col
         self.__cells = BoardContainer(self.__row, self.__col)  # [['' for _ in range(self.__col)] for _ in range(self.__row)]
-        self.__special_cells = copy.deepcopy(special_cells)
+        self.__premium_cells = copy.deepcopy(premium_cells)
 
         self._cross_checks: List[List[List[List[str]]]] = []
         self.best_score: int = 0
@@ -280,6 +313,9 @@ class Board:
 
     def get_dictionary(self) -> DictionaryWrapper:
         return self.__dictionary
+
+    def get_locked_tiles(self) -> List[TILE]:
+        return [tile for tile in self.__cells if isinstance(tile, TILE) and tile.is_locked]
 
     def at(self, row: int, col: int) -> Optional[TILE]:
         return self.__cells.at(row, col)
@@ -375,6 +411,9 @@ class Board:
         return ""
 
     def validate_word(self, word: WORD) -> Tuple[bool, str]:
+        """
+        @brief: Validate the word if it is a valid word in the dictionary (used in unit tests)
+        """
         serialized_word = self.serialize_word(word)
         if serialized_word == "": False, ""
 
@@ -394,6 +433,30 @@ class Board:
             return (1, 1)
 
     def calculate_points(self, word: WORD) -> int:
+        """
+        @brief: Calculate the points of the word
+        """
+        # First check is there any anchored tile exists in the board. 
+        # If it is not, the word should be placed on the center
+        anchored = False
+        for col in range(self.cols):
+            for row in range(self.rows):
+                if self.is_anchor(row, col):
+                    anchored = True
+                    break
+            if anchored:
+                break
+        
+        # Check if the word is placed on the center, or it is placed on the valid cell
+        is_word_in_center = False
+        for tile in word:
+            if not self.check_boundary(tile): return 0
+            if not self.__cells.is_empty(tile.row, tile.col): return 0
+            if tile.row == self.midrow and tile.col == self.midcol: is_word_in_center = True
+
+        if (not anchored) and (not is_word_in_center):
+            return 0  # The first word should be placed on the center
+
         direction = self.find_word_direction(word)
 
         if (direction == Board.Direction.Horizontal):
@@ -403,7 +466,7 @@ class Board:
             completed_word = self.complete_word(sorted_[0].row, sorted_[0].col, 0, 1, sorted_)
             
             score = self.score_play(completed_word[-1].row, completed_word[-1].col, 0, 1, completed_word, o_words)
-            print(f"Horizontal Score: {score} words : {o_words}")
+            #print(f"Horizontal Score: {score} words : {o_words}")
             # Check all founded words are valid
             flag = True
             for t_word in o_words:
@@ -416,7 +479,7 @@ class Board:
             o_words: List[Dict[str, int]] = []
             completed_word = self.complete_word(sorted_[0].row, sorted_[0].col, 1, 0, sorted_)
             score = self.score_play(completed_word[-1].row, completed_word[-1].col, 1, 0, completed_word, o_words)
-            print(f"Vertical Score: {score} words : {o_words}")
+            #print(f"Vertical Score: {score} words : {o_words}")
             # Check all founded words are valid
             flag = True
             for t_word in o_words:
@@ -432,7 +495,7 @@ class Board:
     def serialize(self) -> Dict[str, LETTER]:
         return self.__cells.serialize()
 
-    def serialize2str(self) -> str:
+    def stringify(self) -> str:
         output = ""
         # Get the number of rows and columns
         rows = self.__cells.rows
@@ -496,8 +559,21 @@ class Board:
                 self.place_tile(tile)
             r += 1
 
-    def print(self) -> None:
-        print(self.serialize2str())
+    def print(self, tentative_tiles: List[TILE]=[]) -> None:
+        modified_cells: List[Tuple[int, int]] = []
+
+        # Try to place all tiles if cell is empty
+        for tentative_tile in tentative_tiles:
+            if self.__cells.is_empty(tentative_tile.row, tentative_tile.col):
+                self.__cells.set(tentative_tile.row, tentative_tile.col, tentative_tile)
+                modified_cells.append((tentative_tile.row, tentative_tile.col))
+
+        print(self.stringify())
+
+        # Clean up tile that was placed before
+        for (r, c) in modified_cells:
+            modified_cell = self.__cells.pop(r, c)
+            modified_cell.is_locked = False
 
     def score_play(self, row: int, col: int, drow: int, dcol: int, tiles: List[TILE], words: Optional[List[Dict[str, int]]] = None) -> int:
         """
@@ -525,12 +601,11 @@ class Board:
         for tile in tiles:
             r += drow
             c += dcol
-            cell_type = self.__special_cells.get(CL(r, c), CT.ORDINARY)
+            cell_type = self.__premium_cells.get(CL(r, c), CT.ORDINARY)
             lm, wm = Board.get_bonus(cell_type)
             tile_score = alphabet[tile.letter][1] if tile.point <0 else tile.point
 
             if not self.__cells.is_empty(r, c):
-                print(f"Cell is not empty {r}, {c}")
                 word_score += tile_score
                 continue  
             
@@ -594,6 +669,9 @@ class Board:
                     (row > 0 and self.__cells.is_empty(row-1, col)) or
                     (row < self.__cells.rows - 1 and self.__cells.is_empty(row+1, col)))
         return False
+
+    def is_empty(self, row: int, col: int) -> bool:
+        return self.__cells.is_empty(row, col)
 
     def find_word_direction(self, word: WORD) -> Direction:
         rows: Dict[int, WORD] = {}
@@ -685,6 +763,22 @@ class Board:
     def calculate_bonus(self, tilesPlaced: int) -> int:
         return 0
 
+    def find_nearest_premium(self, row, col) -> Tuple[int, CT]:
+        """
+        @brief Calculate the Manhattan distance to the nearest premium cell.
+        """
+        min_distance = -1
+        nearest_premium = None
+        
+        for cl, ct in PREMIUM_CELLS.items():
+            distance = abs(row - cl.row) + abs(col - cl.col)
+            
+            if distance < min_distance:
+                min_distance = distance
+                nearest_premium = ct
+                
+        return (min_distance, nearest_premium) if min_distance >= 0 else (None, None)
+
     def compute_cross_checks(self, available: List[LETTER]) -> None:
         """
         @brief Determine which letters can fit in each square and form a valid
@@ -774,11 +868,13 @@ class Board:
             words = []
 
             score = self.score_play(row, col, drow, dcol, word_so_far, words)
-            
+
             if score > self.best_score:
                 # This is best score so far
                 self.best_score = score
                 heapq.heappush(self.best_moves, MOVE(score, word_so_far[:]))
+
+                self.print(word_so_far)
 
                 print("*************")
                 print("score:", score)
@@ -939,16 +1035,10 @@ class Board:
         
         return (best_score, best_word)
 
-    def find_best_play(self, rack_letters: List[LETTER]) -> List[MOVE]:
+    def get_possible_moves(self, rack_tiles: List[TILE]) -> List[MOVE]:
         self.best_moves.clear()
         self.best_score = 0
         self._cross_checks.clear()
-
-        # Convert list of letters to list of tiles
-        rack_tiles: List[TILE] = []
-        for letter in rack_letters:
-            is_blank = True if letter == BLANK_LETTER else False
-            rack_tiles.append(TILE(0, 0, letter, self.__dictionary.get_alphabet()[letter][1], is_blank, False))
 
         # Sort the rack tiles by point value and then by letter
         rack_tiles = sorted(rack_tiles, key=lambda t: (-t.point, t.letter))

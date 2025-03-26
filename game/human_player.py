@@ -12,3 +12,6 @@ class HumanPlayer(Player):
         super().__init__(board, "")
         self._player_type = PlayerType.HUMAN
         self._player_privileges = player_privileges
+
+    def _listen(self, message: any) -> None:
+        pass
