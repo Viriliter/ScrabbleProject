@@ -259,8 +259,14 @@
         </div>
     </div>
     <dialog id="myJokerDialog">
-        <div class="joker-tile-container"></div>
-        <button class="close-btn" id="closeJokerDialog">Close</button>
+        <div class="joker-tile-selector-window">
+            <div>
+                <p style="font-size: 16px; font-weight: bold">Select a Tile to Replace with the Joker Tile.</p>
+            </div>
+            <div class="joker-tile-selector-container" id="jokerTilesContainer">
+            </div>
+            <button class="joker-tile-selector-choose-btn">Choose</button>
+        </div>
     </dialog>
 </body>
 
@@ -336,22 +342,25 @@ window.onload = function() {
     myGame = new Game(gameID);
 
     // Following function also creates myPlayer
-    fetchPlayerName(playerID);
+    //fetchPlayerName(playerID);
 
     // This will update game window
     // Need to put some delay since socket connections are not properly handled during page load
-    setTimeout(requestUpdate, 500);  // 500ms
+    //setTimeout(requestUpdate, 500);  // 500ms
+    debugMode();
 };
 
 // For debug purposes
-/*
-{
-    let totalTiles = 0;
-    letterCounts.forEach((count, letter) => {
-        totalTiles += count;
-    });
+function debugMode() {
+    const playerOrderDiv = document.getElementById('playerOrderDiv');
+    const rackDiv = document.getElementById('rackDiv');
+    const orderTileDiv = document.getElementById('orderTileDiv');
 
-    let myTiles = ['A', 'B', 'C', 'E', 'J', 'K', 'L'];
+    playerOrderDiv.style.visibility = 'collapse';
+    rackDiv.style.visibility = 'visible';
+    orderTileDiv.style.visibility = 'collapse';
+
+    let myTiles = ['A', 'B', 'C', 'E', 'J', 'K', ' '];
     const scrabbleRack = document.getElementById('scrabbleRack');
 
     // Add my tiles to the scrabble rack
@@ -361,7 +370,6 @@ window.onload = function() {
         scrabbleRack.appendChild(tile);
     });
 }
-*/
 
 // Drag and Drop functions
 /*

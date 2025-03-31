@@ -14,14 +14,14 @@ let selectedTiles = [];
 let tileCounter = 0; // Initialize a counter for the tiles
 
 // Create the tile element
-function createTile(letter, points, id=-1, location = '') {
+function createTile(letter, id=-1, isJoker='false', location='') {
     const tile = document.createElement('div');
     tile.classList.add('tile');
     tile.textContent = letter;  // Only the letter is shown on the tile
     tile.setAttribute('value', letter); // Set value of tile
     tile.setAttribute('location', location); // Set the location attribute
-    tile.setAttribute('joker', false);
-    tile.style.position = 'relative'; 
+    tile.setAttribute('isJoker', letter === ' ' || isJoker==='true' ? true : false);
+    tile.style.position = 'relative';
     
     // If no ID is provided, assign a new one
     if (id === -1) {
@@ -32,19 +32,11 @@ function createTile(letter, points, id=-1, location = '') {
     // Add a span to display the points
     const pointsSpan = document.createElement('span');
     pointsSpan.classList.add('points');
-    pointsSpan.textContent = points;
+    pointsSpan.textContent = tile.getAttribute('isJoker')=='true' ? 0: letterPoints.get(letter);;
     tile.appendChild(pointsSpan);
 
-    if (letter === ' ') {
-        tile.setAttribute('value', ''); // Set value of tile
-        tile.setAttribute('joker', true);
-        tile.addEventListener("click", () => {
-            showJokerTileDialog(tile)
-        });
-    } else {
-        tile.addEventListener('mousedown', mouseDownHandler);
-        tile.addEventListener('click', clickHandler);
-    }
+    tile.addEventListener('mousedown', mouseDownHandler);
+    tile.addEventListener('click', clickHandler);
 
     return tile;
 }
@@ -100,12 +92,17 @@ function mouseUpHandler(event) {
 
         if (!tile.hasChildNodes()) return;
 
-        const letter = tile.firstChild.textContent; // Only the letter, without any span
-        const points = letterPoints.get(letter);  // Get points based on the letter
+        let letter = tile.firstChild.textContent; // Only the letter, without any span
         const tileID = tile.getAttribute('tileID');
+        const isJoker = tile.getAttribute('isJoker');
         
         if (tileID === null) {
             tileID = tileCounter++;
+        }
+
+        if (isJoker==='true') {
+            tile.setAttribute('value', ' ');
+            letter = ' ';
         }
 
         const parentNode = tile.parentNode;
@@ -119,7 +116,8 @@ function mouseUpHandler(event) {
                 parentNode.removeChild(tile);
             }
 
-            const returnTile = createTile(letter, points, tileID);  // Create the tile again
+            const returnTile = createTile(letter, tileID, isJoker);  // Create the tile again
+
             const scrabbleRack = document.getElementById('scrabbleRack');
             scrabbleRack.appendChild(returnTile);
 
@@ -132,7 +130,7 @@ function mouseUpHandler(event) {
             const cellLocation = dropTarget.getAttribute('location').split('_')[1];
 
             // Create a new tile and add it to the drop target
-            const newTile = createTile(letter, points, tileID, cellLocation);
+            const newTile = createTile(letter, tileID, isJoker, cellLocation);
             dropTarget.innerHTML = '';  // Clear the cell
             dropTarget.appendChild(newTile);  // Place the tile on the board
             
@@ -140,16 +138,19 @@ function mouseUpHandler(event) {
             if (parentNode.contains(tile)) parentNode.removeChild(tile);
 
             newTile.classList.add('placed-tile'); // Add placed-tile class
-            const letterValue = newTile.getAttribute('value');
-            const isJoker = newTile.getAttribute('joker');
-            addSelectedTile(letterValue, tileID, cellLocation, isJoker);
-            verifyWord(selectedTiles);
+            addSelectedTile(letter, tileID, isJoker, cellLocation);
+            // If tile is joker open joker selection dialog, otherwise varify the word.
+            if (isJoker==='true') {
+                showJokerTileDialog(newTile);
+            } else {
+                verifyWord(selectedTiles);
+            }
             
         } else if (dropTarget.classList.contains('rack')) {  // Check if the drop target is the scrabble rack
             console.log('Tile placed rack');
 
             // Create a new tile and add it to the drop target
-            const newTile = createTile(letter, points, tileID);
+            const newTile = createTile(letter, tileID, isJoker);
             dropTarget.appendChild(newTile);  // Place the tile on the board
             
             // Remove the original tile from the scrabble rack
@@ -166,8 +167,8 @@ function mouseUpHandler(event) {
                 parentNode.removeChild(tile);
             }
 
-            const returnTile = createTile(letter, points, tileID);  // Create the tile again
-            const scrabbleRack = document.getElementById('scrabbleRack');
+            const returnTile = createTile(letter, tileID, isJoker);  // Create the tile again
+            const scrabbleRack = document.getElementById('scrabbleRack');    
             scrabbleRack.appendChild(returnTile);
 
             removeSelectedTile(tileID);
@@ -207,6 +208,7 @@ function verifyWord(tiles) {
         return;
     }
 
+    console.log('Verifying word...');
     tiles.forEach((letter, tileID, location) => {
         console.log(letter, tileID, location);
     });
@@ -248,7 +250,6 @@ function fetchPlayerName(playerID) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            console.log(data);
             console.log(`Player Name: ${data.playerName}`);
             if (data.playerName !== null) {
                 myPlayer = new Player(playerID, data.playerName);
@@ -262,10 +263,86 @@ function fetchPlayerName(playerID) {
     });
 }
 
+function loadJokerTileSelector(myTile) {
+    // Generate tiles for all English letters
+    const jokerTilesContainer = document.getElementById('jokerTilesContainer');
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let selectedJokerTile = null;
+
+    jokerTilesContainer.innerHTML = '';
+    
+    for (let letter of letters) {
+        const tile = document.createElement('div');
+        tile.className = 'joker-tile-selector-tile';
+        tile.textContent = letter;
+        tile.dataset.letter = letter;
+        tile.dataset.points = letterPoints.get(letter);
+        
+        tile.addEventListener('click', function() {
+            if (selectedJokerTile) {
+                selectedJokerTile.classList.remove('selected');
+                document.querySelectorAll('.joker-tile-selector-tile').forEach(t => t.classList.remove('unselected'));
+            } 
+            
+            if (selectedJokerTile !== this) {
+                this.classList.add('joker-tile-selector');
+                document.querySelectorAll('.joker-tile-selector-tile').forEach(t => {
+                    if (t !== this) t.classList.add('unselected');
+                });
+                selectedJokerTile = this
+            } else {
+                selectedJokerTile = null
+            }
+        });
+        
+        jokerTilesContainer.appendChild(tile);
+    }
+    
+    // Select button functionality
+    document.querySelector('.joker-tile-selector-choose-btn').addEventListener('click', function() {
+        if (myTile===null) return;
+    
+        if (selectedJokerTile!==null) {
+            myTile.textContent = selectedJokerTile.dataset.letter;
+            myTile.setAttribute('value', selectedJokerTile.dataset.letter);
+            myTile.style.position = 'relative'; 
+
+            const pointsSpan = document.createElement('span');
+            pointsSpan.classList.add('points');
+            pointsSpan.textContent = '0';
+            myTile.appendChild(pointsSpan);
+
+            myTile.addEventListener('mousedown', mouseDownHandler);
+            myTile.addEventListener('click', clickHandler);
+
+            const dialog = document.getElementById('myJokerDialog');
+            dialog.close();
+            verifyWord(selectedTiles);
+        } else {
+            myTile.textContent = ' ';
+            myTile.setAttribute('value', ' ');
+            myTile.style.position = 'relative'; 
+
+            const pointsSpan = document.createElement('span');
+            pointsSpan.classList.add('points');
+            pointsSpan.textContent = '0';
+            myTile.appendChild(pointsSpan);
+
+            myTile.removeEventListener('mousedown', mouseDownHandler);
+            myTile.removeEventListener('click', clickHandler);
+
+            alert('Please select a letter first');
+        }    
+    });
+
+}
+
 // User actions
 
 function showJokerTileDialog(tile) {
-    dialog = document.getElementById('myJokerDialog');   
+    loadJokerTileSelector(tile)
+
+    dialog = document.getElementById('myJokerDialog');
     dialog.showModal();  // Opens the dialog as a modal
 }
 
@@ -378,10 +455,21 @@ function revertTiles() {
     const scrabbleRack = document.getElementById('scrabbleRack');
 
     const placedTiles = document.querySelectorAll('.placed-tile');
-    console.log(placedTiles);
+
     placedTiles.forEach(tile => {
         // Remove the tile from the board
         tile.parentElement.removeChild(tile);
+
+        if (tile.getAttribute('isJoker')==='true') {
+            tile.textContent = ' ';
+            tile.setAttribute('value', ' ');
+            tile.style.position = 'relative'; 
+
+            const pointsSpan = document.createElement('span');
+            pointsSpan.classList.add('points');
+            pointsSpan.textContent = '0';
+            tile.appendChild(pointsSpan);
+        }
 
         // Optionally, return the tile to the player's rack
         scrabbleRack.appendChild(tile);
@@ -711,11 +799,10 @@ function updateBoard(board_) {
     // Update game board according to serialized board info 
     Object.entries(board_).forEach(([cl, letter]) => {
         const cellId = `cell_${cl}`;
-        console.log(cellId)
         const targetCell = document.getElementById(cellId);
 
         const points = letterPoints.get(letter);  // Get points based on the letter
-        const newTile = createTile(letter, points, -1, cl);
+        const newTile = createTile(letter, points, false, cl);
 
         targetCell.appendChild(newTile);
         newTile.classList.add('blocked');
