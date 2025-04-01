@@ -188,7 +188,7 @@ function clickHandler(event) {
     }
 }
 
-function addSelectedTile(letter, tileID, location, isJoker) {
+function addSelectedTile(letter, tileID, isJoker, location) {
     const existingTile = selectedTiles.find(t => t.tileID === tileID);
     if (existingTile) {
         // Update the location if the tile is already placed
@@ -197,6 +197,10 @@ function addSelectedTile(letter, tileID, location, isJoker) {
         // Add the new tile to the selectedTiles array
         selectedTiles.push({tileID, letter, location, isJoker});
     }
+}
+
+function clearSelectedTile() {
+    selectedTiles = []
 }
 
 function removeSelectedTile(tileID) {
@@ -337,12 +341,86 @@ function loadJokerTileSelector(myTile) {
 
 }
 
+function loadExchangeLetterSeclector() {
+    const scrabbleRack = document.getElementById('scrabbleRack');
+    const tilesInRack = scrabbleRack.querySelectorAll('.tile');
+
+    // Generate tiles for all letters available in the rack
+    const exchangeLetterContainer = document.getElementById('exchangeLetterContainer');
+    let selectedExchangeTile = null;
+
+    exchangeLetterContainer.innerHTML = '';
+    
+    for (let tileInRack of tilesInRack) {
+        const pointSpan = tileInRack.querySelector('.points');
+        const letter = tileInRack.getAttribute('value');
+        const points = pointSpan ? pointSpan.textContent : '0';
+        const isJoker = tileInRack.getAttribute('isJoker');
+
+        const tile = document.createElement('div');
+        tile.className = 'exchange-letter-selector-tile';
+        tile.textContent = letter;
+
+        tile.dataset.letter = letter;
+        tile.dataset.points = points;
+        tile.dataset.isJoker = isJoker;
+        tile.style.position = 'relative'; 
+
+        tile.addEventListener('click', function() {
+            if (selectedExchangeTile) {
+                selectedExchangeTile.classList.remove('selected');
+                document.querySelectorAll('.exchange-letter-selector-tile').forEach(t => t.classList.remove('unselected'));
+            } 
+            
+            if (selectedExchangeTile !== this) {
+                this.classList.add('exchange-letter-selector');
+                document.querySelectorAll('.exchange-letter-selector-tile').forEach(t => {
+                    if (t !== this) t.classList.add('unselected');
+                });
+                selectedExchangeTile = this
+            } else {
+                selectedExchangeTile = null
+            }
+        });
+        
+        exchangeLetterContainer.appendChild(tile);
+    }
+    
+    // Close button functionality
+    document.querySelector('.exchange-letter-selector-close-btn').addEventListener('click', function() {
+        const dialog = document.getElementById('myExchangeDialog');
+        dialog.close();
+    });
+
+    // Select button functionality
+    document.querySelector('.exchange-letter-selector-choose-btn').addEventListener('click', function() {
+        if (selectedExchangeTile!==null) {
+            const letter = selectedExchangeTile.dataset.letter;
+            console.log('letter   :::::: ' + letter);
+            const dialog = document.getElementById('myExchangeDialog');
+            dialog.close();
+            exchangeLetter(letter);
+        } else {
+            alert('Please select a letter first');
+        }    
+    });
+}
+
 // User actions
 
 function showJokerTileDialog(tile) {
     loadJokerTileSelector(tile)
 
     dialog = document.getElementById('myJokerDialog');
+    dialog.showModal();  // Opens the dialog as a modal
+}
+
+function showExchangeLetterDialog() {
+    revertTiles();
+
+    loadExchangeLetterSeclector();
+
+    dialog = document.getElementById('myExchangeDialog');
     dialog.showModal();  // Opens the dialog as a modal
 }
 
@@ -451,6 +529,30 @@ function requestRack() {
     });
 }
 
+function exchangeLetter(letter) {
+    console.log('exchange tile...');
+    fetch(`${window.location}/exchange-letter`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({'letter': letter})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            if (myPlayer !== null) {
+                requestRack();
+            }
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Unknown Error:', error);
+    });
+}
+
 function revertTiles() {
     const scrabbleRack = document.getElementById('scrabbleRack');
 
@@ -540,32 +642,12 @@ function submitWord(tiles=[]) {
             if (data.points>0) {
                 document.getElementById('myPlayerPoints').textContent = data.points;
                 updateTentativePoints(0);  // This will clear tentative points
+                clearSelectedTile();
             } else {
                 alert('Word verification failed!');
             }
         } else {
             updateTentativePoints(0);  // This will clear tentative points
-            alert('Error: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Unknown Error:', error);
-    });
-}
-
-function swapLetter() {
-    fetch(`${window.location}/swap-letter`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({'gameID': myGame.getGameID(), 'playerID': myPlayer.getPlayerID()})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-
-        } else {
             alert('Error: ' + data.message);
         }
     })
@@ -801,8 +883,7 @@ function updateBoard(board_) {
         const cellId = `cell_${cl}`;
         const targetCell = document.getElementById(cellId);
 
-        const points = letterPoints.get(letter);  // Get points based on the letter
-        const newTile = createTile(letter, points, false, cl);
+        const newTile = createTile(letter=letter, cellLocation=cl);
 
         targetCell.appendChild(newTile);
         newTile.classList.add('blocked');
@@ -822,8 +903,7 @@ function updateMyRack(racks_) {
 
     Object.entries(racks_).forEach(([letter, count]) => {
         for (let i = 0; i < count; i++) {
-            const points = letterPoints.get(letter);  // Get points based on the letter
-            let tile = createTile(letter, points);
+            let tile = createTile(letter);
             scrabbleRack.appendChild(tile);
         }
     });

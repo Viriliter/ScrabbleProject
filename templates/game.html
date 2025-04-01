@@ -24,6 +24,19 @@
         }
 
         /* Objects */
+        #exchangeButton {
+            background-color: #52a1e1; /* Light blue background */
+            border: 2px solid white; /* White border */
+        }
+        #exchangeButton svg {
+            width: var(--icon-size);
+            height: var(--icon-size);
+            fill: #2d425d;
+            stroke: none; /* Dark blue color for the logo */
+        }
+        #exchangeButton:hover {
+            background-color: #366a94; /* Slightly darker blue on hover */
+        }
         #revertButton {
             background-color: #ADD8E6; /* Light blue background */
             border: 2px solid white; /* White border */
@@ -232,9 +245,14 @@
             <div class="bottom-container">
                 <div id="rackDiv" style="display: flex; visibility: collapse;">
                     <div class="rack-container">
-                        <button class="circular-button" id="shuffleButton" title="Shuffle">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M560-160v-80h104L537-367l57-57 126 126v-102h80v240H560Zm-344 0-56-56 504-504H560v-80h240v240h-80v-104L216-160Zm151-377L160-744l56-56 207 207-56 56Z"/></svg>
-                        </button>
+                        <div>
+                            <button class="circular-button" id="exchangeButton" title="Exchange">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" ><path d="M320-440v-287L217-624l-57-56 200-200 200 200-57 56-103-103v287h-80ZM600-80 400-280l57-56 103 103v-287h80v287l103-103 57 56L600-80Z"/></svg>
+                            </button>
+                            <button class="circular-button" id="shuffleButton" title="Shuffle">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M560-160v-80h104L537-367l57-57 126 126v-102h80v240H560Zm-344 0-56-56 504-504H560v-80h240v240h-80v-104L216-160Zm151-377L160-744l56-56 207 207-56 56Z"/></svg>
+                            </button>
+                        </div>
                         <div class="rack" id="scrabbleRack"></div>
                         <button class="circular-button" id="revertButton" title="Revert">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m 600,-200 -56,-57 143,-143 H 300 q -75,0 -127.5,-52.5 Q 120,-505 120,-580 120,-655 172.5,-707.5 225,-760 300,-760 h 20 v 80 h -20 q -42,0 -71,29 -29,29 -29,71 0,42 29,71 29,29 71,29 h 387 l -143,-144 56,-56 240,240 z"/></svg>
@@ -258,7 +276,7 @@
             <div class="leader-board-table" id="tableLeaderboard"></div>
         </div>
     </div>
-    <dialog id="myJokerDialog">
+    <dialog id="myJokerDialog" style="padding: 0px;">
         <div class="joker-tile-selector-window">
             <div>
                 <p style="font-size: 16px; font-weight: bold">Select a Tile to Replace with the Joker Tile.</p>
@@ -266,6 +284,17 @@
             <div class="joker-tile-selector-container" id="jokerTilesContainer">
             </div>
             <button class="joker-tile-selector-choose-btn">Choose</button>
+        </div>
+    </dialog>
+    <dialog id="myExchangeDialog" style="padding: 0px;">
+        <div class="exchange-letter-selector-window">
+            <button class="exchange-letter-selector-close-btn">X</button>
+            <div>
+                <p style="font-size: 16px; font-weight: bold">Select the Tile to exchange with the Tile Bag.</p>
+            </div>
+            <div class="exchange-letter-selector-container" id="exchangeLetterContainer">
+            </div>
+            <button class="exchange-letter-selector-choose-btn">Choose</button>
         </div>
     </dialog>
 </body>
@@ -342,12 +371,12 @@ window.onload = function() {
     myGame = new Game(gameID);
 
     // Following function also creates myPlayer
-    //fetchPlayerName(playerID);
+    fetchPlayerName(playerID);
 
     // This will update game window
     // Need to put some delay since socket connections are not properly handled during page load
-    //setTimeout(requestUpdate, 500);  // 500ms
-    debugMode();
+    setTimeout(requestUpdate, 500);  // 500ms
+    //debugMode();
 };
 
 // For debug purposes
@@ -424,6 +453,8 @@ function drop(event) {
 document.getElementById('returnLobbyButton').addEventListener('click', quitGame);
 document.getElementById('requestOrderButton').addEventListener('click', requestOrder);
 document.getElementById('revertButton').addEventListener('click', revertTiles);
+document.getElementById('exchangeButton').addEventListener('click', showExchangeLetterDialog);
+
 document.getElementById('shuffleButton').addEventListener('click', shuffleTiles);
 document.getElementById('skipTurnButton').addEventListener('click', skipTurn);
 document.getElementById('submitButton').addEventListener('click', () => {

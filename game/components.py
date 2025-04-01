@@ -38,7 +38,7 @@ class TileBag:
                 self.__tiles[letter] = (count, points)
             self.__remaning_tiles += count
 
-    def get_random_tile(self) -> TILE:
+    def get_random_tile(self) -> Optional[TILE]:
         if self.__remaning_tiles == 0:
             return None  # Bag is empty
         

@@ -351,6 +351,28 @@ def verify_word_debug() -> Response:
     
     return jsonify({"status": "success", "points": calculated_points}), 200
 
+@app.route("/game/<game_id>/<player_id>/exchange-letter", methods=["POST"])
+def exchange_letter(game_id: str, player_id: str) -> Response:
+    request_json = request.get_json()
+
+    if request_json is None:
+        return jsonify({"status": "error", "message": "Invalid request"}), 400
+
+    letter = request_json["letter"]
+
+    if not letter or len(letter) == 0:
+        return jsonify({"status": "error", "message": "Missing parameter(s)"}), 400
+
+    game = get_game(game_id)
+    if game is not None:
+        isSucccess = game.exchange_letter(player_id, letter)
+        if isSucccess:
+            return jsonify({"status": "success"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Cannot change the tile. Tile bag may be empty."}), 200
+    else:
+        return jsonify({"status": "error", "message": "Game not found"}), 404
+
 @app.route("/game/<game_id>/<player_id>/skip-turn", methods=["POST"])
 def skip_turn(game_id: str, player_id: str) -> Response:
     if not game_id or not player_id:

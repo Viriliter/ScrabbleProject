@@ -252,7 +252,7 @@ dialog::backdrop {
     background-color: #1B5E20;
 }
 
-        
+
 .joker-tile-selector-container {
     display: flex;
     flex-wrap: wrap;
@@ -298,5 +298,95 @@ dialog::backdrop {
 }
 
 .joker-tile-selector-tile.unselected {
+    opacity: 0.5;
+}
+
+.exchange-letter-selector-window {
+    position: relative;
+    background-color: var(--cell-color);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    color: white;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.exchange-letter-selector-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.exchange-letter-selector-close-btn:hover {
+    background-color: #FF0000;
+}
+
+.exchange-letter-selector-choose-btn {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 20px;
+    background-color: #2E7D32;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.exchange-letter-selector-choose-btn:hover {
+    background-color: #1B5E20;
+}
+
+.exchange-letter-selector-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.exchange-letter-selector-tile {
+    width: 40px;
+    height: 40px;
+    background-color: #c6ae89;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+}
+
+.exchange-letter-selector-tile:hover {
+    border: 2px solid white;
+}
+
+.exchange-letter-selector-tile.selected {
+    background-color: white;
+    border: 2px solid white;
+}
+
+.exchange-letter-selector-tile::after {
+    content: attr(data-points);
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 10px;
+    color: #000;
+}
+
+.exchange-letter-selector-tile.unselected {
     opacity: 0.5;
 }

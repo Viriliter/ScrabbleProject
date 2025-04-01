@@ -137,3 +137,6 @@ class Player(Observer):
     def add_tiles(self, tiles: List[TILE]) -> None:
         for tile in tiles:
             self._rack.add_tile(tile)
+
+    def get_rack(self) -> List[TILE]:
+        return self._rack.get_rack()

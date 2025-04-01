@@ -20,6 +20,7 @@ class GameMeta:
 
 class Scrabble(Subject):
     default_lang = LANG_KEYS.ENG
+    BINGO_BONUS: int = 25
 
     def __init__(self, socketio: SocketIO, player_count=MIN_PLAYER_COUNT):
         super().__init__()
@@ -246,6 +247,10 @@ class Scrabble(Subject):
     def verify_word(self, word: WORD) -> int:
         points = self.__board.calculate_points(word)
 
+        # Add bingo bonus if all letters are used
+        if (len(word)==7 and points>0):
+            points += Scrabble.BINGO_BONUS
+
         return points
 
     def submit(self, player_id: str, word: WORD) -> int:
@@ -259,6 +264,9 @@ class Scrabble(Subject):
 
         # Only current player submit its word
         if not (player.get_player_id() == self.__currentPlayer.get_player_id()):
+            return 0
+
+        if word is None:
             return 0
 
         points = self.verify_word(word)
@@ -287,6 +295,33 @@ class Scrabble(Subject):
         self.update_clients()  # Notify all clients about the changes
 
         return points
+
+    def exchange_letter(self, player_id: str, letter: LETTER) -> bool:
+        print(f"Player {player_id} is about to exchange its letter.")
+        player = self.found_player(player_id)
+        if player is None: return False
+
+        newTile = self.__tile_bag.get_random_tile()
+        tiles = player.get_rack()
+
+        if tiles is None or len(tiles) == 0 or newTile is None:
+            return False
+
+        for tile in tiles:
+            if (tile.letter == letter):
+                print("Removing tile from the rack")
+                player.remove_from_rack(tile)
+                break
+
+        self.__tile_bag.put_back_letter(letter)
+
+        player.add_tile(newTile)
+
+        print(player.get_serialized_rack())
+
+        self.next_turn()
+
+        return True
 
     def next_turn(self) -> Player:
         """
