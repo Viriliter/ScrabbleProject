@@ -432,30 +432,25 @@ class Board:
         else:
             return (1, 1)
 
-    def calculate_points(self, word: WORD) -> int:
+    def calculate_points(self, word: WORD, check_center=True) -> int:
         """
         @brief: Calculate the points of the word
         """
-        # First check is there any anchored tile exists in the board. 
-        # If it is not, the word should be placed on the center
-        anchored = False
-        for col in range(self.cols):
-            for row in range(self.rows):
-                if self.is_anchor(row, col):
-                    anchored = True
-                    break
-            if anchored:
-                break
-        
-        # Check if the word is placed on the center, or it is placed on the valid cell
-        is_word_in_center = False
-        for tile in word:
-            if not self.check_boundary(tile): return 0
-            if not self.__cells.is_empty(tile.row, tile.col): return 0
-            if tile.row == self.midrow and tile.col == self.midcol: is_word_in_center = True
+        if check_center:
+            # Check any tile placed on center cell. 
+            # If it is not, the word should be placed on the center
+            is_center_empty = True if self.__cells.is_empty(self.midrow, self.midcol) else False
+            
+            # Check whether the word is placed on a valid cell
+            is_word_in_center = False
+            for tile in word:
+                if not self.check_boundary(tile): return 0
+                if not self.__cells.is_empty(tile.row, tile.col): return 0
+                if tile.row == self.midrow and tile.col == self.midcol: is_word_in_center = True
 
-        if (not anchored) and (not is_word_in_center):
-            return 0  # The first word should be placed on the center
+            # If the center cell is empty and the word should be placed on the center
+            if is_center_empty and not is_word_in_center:
+                return 0  # The first word should be placed on the center
 
         direction = self.find_word_direction(word)
 

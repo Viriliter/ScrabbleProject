@@ -100,8 +100,8 @@ class TestBoard(unittest.TestCase):
         }
 
         for expected, (word, exp_score) in word_list.items():
-            points = board.calculate_points(word)
-            self.assertEqual(points, exp_score)
+            points = board.calculate_points(word, False)
+            self.assertEqual(points, exp_score, f"Failed for word: '{expected}'")
 
     @measure_time
     def test_calculate_points_vertical(self):
@@ -115,8 +115,8 @@ class TestBoard(unittest.TestCase):
         }
 
         for expected, (word, exp_score) in word_list.items():
-            points = board.calculate_points(word)
-            self.assertEqual(points, exp_score)
+            points = board.calculate_points(word, False)
+            self.assertEqual(points, exp_score, f"Failed for word: '{expected}'")
 
     @measure_time
     def test_calculate_points_diagonal(self):
@@ -130,9 +130,25 @@ class TestBoard(unittest.TestCase):
         }
 
         for expected, (word, exp_score) in word_list.items():
-            points = board.calculate_points(word)
-            self.assertEqual(points, exp_score, f"Failed for word: {expected}")
-    
+            points = board.calculate_points(word, False)
+            self.assertEqual(points, exp_score, f"Failed for word: '{expected}'")
+
+    @measure_time
+    def test_center_cell(self):
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
+
+        word_list = {
+            'ASTRONOMY': ([TILE(4 , 7 , 'A'),TILE(5 , 7 , 'S'),TILE(6 , 7 , 'T'),TILE(7 , 7 , 'R'),TILE(8 , 7 , 'O'),TILE(9 , 7 , 'N'),TILE(10, 7, 'O'),TILE(11, 7, 'M'),TILE(12, 7, 'Y')], 34),
+            'PYTHON':    ([TILE(0 , 0 , 'P'),TILE(1 , 0 , 'Y'),TILE(2 , 0 , 'T'),TILE(3 , 0 , 'H'),TILE(4 , 0 , 'O'),TILE(5 , 0 , 'N')]                                                   , 0 ),
+        }
+        expected, (word, exp_score) = list(word_list.items())[0]
+        points = board.calculate_points(word, True)
+        self.assertEqual(points, exp_score, f"Failed for word: '{expected}'")
+
+        expected, (word, exp_score) = list(word_list.items())[1]
+        points = board.calculate_points(word, True)
+        self.assertEqual(points, exp_score, f"Failed for word: '{expected}'")
+
     @measure_time
     def test_calculate_points_complex(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
