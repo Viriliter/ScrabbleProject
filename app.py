@@ -82,7 +82,13 @@ def handle_connect():
         return
 
     game = get_game(game_id)
-    game.add_sid(sid, player_id)
+    if game is None:
+        return
+    
+    # If player is referee, add referee SID
+    # Otherwise, add player SID
+    if player_id == "referee": game.add_referee_sid(sid, player_id)
+    else: game.add_sid(sid, player_id)
     print(f"APP >>> Player {player_id} joined Game {game_id} (SID: {sid})")
 
 @socketio.on("disconnect")
@@ -95,7 +101,11 @@ def handle_disconnect():
         return
 
     game = get_game(game_id)
-    game.remove_sid(sid, player_id)
+    if game is None:
+        return
+
+    if player_id == "referee": game.remove_referee_sid(sid, player_id)
+    else: game.remove_sid(sid, player_id)
     print(f"APP >>> Player {player_id} disconnected from Game {game_id} (SID: {sid})")
 
 # Home Page
@@ -248,6 +258,9 @@ def enter_game() -> Response:
             return jsonify({"status": "error", "message": "Player cannot enter to game"}), 400
 
 # Game POSTS
+@app.route("/game/<game_id>/referee")
+def referee(game_id: str) -> Response:
+    return render_template('referee.html', game_id=game_id, player_id="referee")
 
 @app.route("/game/<game_id>/<player_id>")
 def game(game_id: str, player_id: str) -> Response:
@@ -415,6 +428,55 @@ def submit(game_id: str, player_id: str) -> Response:
                 return jsonify({"status": "success", "points": calculated_points}), 200
             else:
                 return jsonify({"status": "error", "message": "Word cannot be submitted"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Player not found"}), 404
+    else:
+        return jsonify({"status": "error", "message": "Game not found"}), 404
+
+@app.route("/game/<game_id>/<player_id>/request-hint", methods=["POST"])
+def request_hint(game_id: str, player_id: str) -> Response:
+    request_json = request.get_json()
+
+    if request_json is None:
+        return jsonify({"status": "error", "message": "Invalid request"}), 400
+
+    letters = request_json if isinstance(request_json, list) else []
+
+    if not game_id or not player_id or len(letters) == 0:
+        return jsonify({"status": "error", "message": "Missing parameters"}), 400
+
+    if len(letters) == 1:
+        return jsonify({"status": "error", "message": "No hint found"}), 200
+
+    print(f'APP >>> Hint request by Player: {player_id}')
+
+    game = get_game(game_id)
+    if game is not None:
+        hints = game.get_hint(player_id, letters)
+        if len(hints)>0:
+            best_hint = hints[0]
+            return jsonify({"status": "success", "hint": str(best_hint.serialize())}), 200
+        else:
+            return jsonify({"status": "error", "message": "No hint found"}), 200
+    else:
+        return jsonify({"status": "error", "message": "Game not found"}), 404
+
+@app.route("/game/<game_id>/<player_id>/quit-game", methods=["POST"])
+def quit_game(game_id: str, player_id: str) -> Response:
+    print(f'APP >>> Player {player_id} is about to quit game {game_id}')
+   
+    if not game_id or not player_id:
+        return jsonify({"status": "error", "message": "Missing parameters"}), 400
+    
+    game = get_game(game_id)
+    if game is not None:
+        player = game.found_player(player_id)
+        if player is not None:
+            is_kicked = game.kick_player(player_id)
+            if is_kicked:
+               return redirect('/')
+            else:
+                return jsonify({"status": "error", "message": "Player cannot be kicked"}), 200
         else:
             return jsonify({"status": "error", "message": "Player not found"}), 404
     else:

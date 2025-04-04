@@ -1,4 +1,5 @@
 import copy
+from enum import Enum
 from typing import List, Dict, Tuple, final
 from dataclasses import dataclass
 
@@ -186,7 +187,50 @@ class TILE:
         """
         @brief: Check if the tiles have same letter an is_blank
         """
-        return (self.letter == other.letter and self.is_blank == other.is_blank)
+        if self.is_blank and other.is_blank:
+            return True
+        if not self.is_blank and not other.is_blank:
+            return self.letter == other.letter
+        return False
+    
+    @staticmethod
+    def print_word(word: 'WORD', file=None) -> None:
+        """
+        @brief: Print the word
+        @param word: List of tiles
+        @param file: File to write the word
+        """
+        temp_word: WORD = copy.deepcopy(word)
+        if (temp_word.__len__()==0): return
+        
+        # Check the direction based on row and column values of the tiles
+        rows = [tile.row for tile in temp_word]
+        cols = [tile.col for tile in temp_word]
+
+        if len(set(rows)) == 1:  # All tiles are in the same row (across)
+            direction = 'across'
+            # Sort by column (left to right)
+            temp_word = sorted(temp_word, key=lambda tile: tile.col)
+            positions = cols
+        elif len(set(cols)) == 1:  # All tiles are in the same column (down)
+            direction = 'down'
+            # Sort by row (top to bottom)
+            temp_word = sorted(temp_word, key=lambda tile: tile.row)
+            positions = rows
+        else:
+            print(("Tiles are not aligned. It is not a word"))
+            return
+        
+        # Print the sorted tiles in the determined direction
+        result = ""
+        for i, tile in enumerate(temp_word):
+            if i > 0:  # If it's not the first tile, check for a gap
+                # Check if there's a gap between consecutive tiles
+                if positions[i] - positions[i - 1] > 1:
+                    result += "."
+            result += str(tile.letter)
+
+        print(result, file=file)
 
     def __iter__(self):
         for key in self.__dict__:
@@ -203,41 +247,17 @@ WORD = List[TILE]
 
 BLANK_LETTER: str = " "
 
-def PRINT_WORD(word: WORD) -> None:
-    temp_word: WORD = copy.deepcopy(word)
-    if (temp_word.__len__()==0): return
-    
-    # Check the direction based on row and column values of the tiles
-    rows = [tile.row for tile in temp_word]
-    cols = [tile.col for tile in temp_word]
+class LetterType(Enum):
+    UNDEFINED = 0
+    CONSONANT = 1
+    VOWEL = 2
 
-    if len(set(rows)) == 1:  # All tiles are in the same row (across)
-        direction = 'across'
-        # Sort by column (left to right)
-        temp_word = sorted(temp_word, key=lambda tile: tile.col)
-        positions = cols
-    elif len(set(cols)) == 1:  # All tiles are in the same column (down)
-        direction = 'down'
-        # Sort by row (top to bottom)
-        temp_word = sorted(temp_word, key=lambda tile: tile.row)
-        positions = rows
-    else:
-        print(("Tiles are not aligned. It is not a word"))
-        return
-    
-    # Print the sorted tiles in the determined direction
-    result = ""
-    for i, tile in enumerate(temp_word):
-        if i > 0:  # If it's not the first tile, check for a gap
-            # Check if there's a gap between consecutive tiles
-            if positions[i] - positions[i - 1] > 1:
-                result += "."
-        result += str(tile.letter)
-
-    print(result)
+LETTER_COUNT = int
+LETTER_POINTS = int
+LETTER_FREQUENCY = int
 
 # Define Alphabet as a Dict includes letters with their counts and points   
-ALPHABET = Dict[LETTER, Tuple[int, int]]
+ALPHABET = Dict[LETTER, Tuple[LETTER_COUNT, LETTER_POINTS, LetterType, LETTER_FREQUENCY]]
 
 @dataclass(frozen=True)
 class LANGUAGE:
@@ -252,6 +272,9 @@ class MOVE:
     def __lt__(self, other: 'MOVE') -> bool:
         return self.score > other.score
     
+    def serialize(self) -> Tuple[str, int]:
+        return ' '.join([str(tile) for tile in self.word]), self.score
+
 BOARD_ROW: int = 15
 
 BOARD_COL: int = 15
@@ -263,65 +286,68 @@ MIN_PLAYER_COUNT: int = 2
 
 COMPUTER_PLAYER_NAMES = ["Socrates", "Plato", "Aristotle", "Marx"]
 
-# Letter: (Count, Points)
+# Letter: (Count, Points, LetterType, Frequency)
 ALPH_ENGLISH: ALPHABET = {
-    'A': (9, 1),
-    'B': (2, 3),
-    'C': (2, 3),
-    'D': (4, 2),
-    'E': (12, 1),
-    'F': (2, 4),
-    'G': (3, 2),
-    'H': (2, 4),
-    'I': (9, 1),
-    'J': (1, 8),
-    'K': (1, 5),
-    'L': (4, 1),
-    'M': (2, 3),
-    'N': (6, 1),
-    'O': (8, 1),
-    'P': (2, 3),
-    'Q': (1, 10),
-    'R': (6, 1),
-    'S': (4, 1),
-    'T': (6, 1),
-    'U': (4, 1),
-    'V': (2, 4),
-    'W': (2, 4),
-    'X': (1, 8),
-    'Y': (2, 4),
-    'Z': (1, 10),
-    ' ': (2, 0)
+    'A': (9 , 1 , LetterType.VOWEL    , 8.200),
+    'B': (2 , 3 , LetterType.CONSONANT, 1.500),
+    'C': (2 , 3 , LetterType.CONSONANT, 2.800),
+    'D': (4 , 2 , LetterType.CONSONANT, 4.300),
+    'E': (12, 1 , LetterType.VOWEL    , 13.00),
+    'F': (2 , 4 , LetterType.CONSONANT, 2.200),
+    'G': (3 , 2 , LetterType.CONSONANT, 2.000),
+    'H': (2 , 4 , LetterType.CONSONANT, 6.100),
+    'I': (9 , 1 , LetterType.VOWEL    , 7.000),
+    'J': (1 , 8 , LetterType.CONSONANT, 0.150),
+    'K': (1 , 5 , LetterType.CONSONANT, 0.770),
+    'L': (4 , 1 , LetterType.CONSONANT, 4.000),
+    'M': (2 , 3 , LetterType.CONSONANT, 2.400),
+    'N': (6 , 1 , LetterType.CONSONANT, 6.700),
+    'O': (8 , 1 , LetterType.VOWEL    , 7.500),
+    'P': (2 , 3 , LetterType.CONSONANT, 1.900),
+    'Q': (1 , 10, LetterType.CONSONANT, 0.095),
+    'R': (6 , 1 , LetterType.CONSONANT, 6.000),
+    'S': (4 , 1 , LetterType.CONSONANT, 6.300),
+    'T': (6 , 1 , LetterType.CONSONANT, 9.100),
+    'U': (4 , 1 , LetterType.VOWEL    , 2.800),
+    'V': (2 , 4 , LetterType.CONSONANT, 0.980),
+    'W': (2 , 4 , LetterType.CONSONANT, 2.400),
+    'X': (1 , 8 , LetterType.CONSONANT, 0.150),
+    'Y': (2 , 4 , LetterType.CONSONANT, 2.000),
+    'Z': (1 , 10, LetterType.CONSONANT, 0.074),
+    ' ': (2 , 0 , LetterType.UNDEFINED, 0.000)
 }
 
 ALPH_TURKISH: ALPHABET = {
-    'A': (9, 1),
-    'B': (2, 3),
-    'C': (2, 3),
-    'D': (4, 2),
-    'E': (12, 1),
-    'F': (2, 4),
-    'G': (3, 2),
-    'H': (2, 4),
-    'I': (9, 1),
-    'J': (1, 8),
-    'K': (1, 5),
-    'L': (4, 1),
-    'M': (2, 3),
-    'N': (6, 1),
-    'O': (8, 1),
-    'P': (2, 3),
-    'Q': (1, 10),
-    'R': (6, 1),
-    'S': (4, 1),
-    'T': (6, 1),
-    'U': (4, 1),
-    'V': (2, 4),
-    'W': (2, 4),
-    'X': (1, 8),
-    'Y': (2, 4),
-    'Z': (1, 10),
-    ' ': (2, 0)
+    'A': (9 , 1 , LetterType.VOWEL,     11.92),
+    'B': (2 , 3 , LetterType.CONSONANT, 2.840),
+    'C': (2 , 3 , LetterType.CONSONANT, 1.070),
+    'Ç': (2 , 3 , LetterType.CONSONANT, 1.250),
+    'D': (4 , 2 , LetterType.CONSONANT, 3.290),
+    'E': (12, 1 , LetterType.VOWEL,     8.910),
+    'F': (2 , 4 , LetterType.CONSONANT, 0.460),
+    'G': (3 , 2 , LetterType.CONSONANT, 1.220),
+    'Ğ': (3 , 2 , LetterType.CONSONANT, 0.500),
+    'H': (2 , 4 , LetterType.CONSONANT, 0.780),
+    'I': (9 , 1 , LetterType.VOWEL,     8.600),
+    'İ': (9 , 1 , LetterType.VOWEL,     8.600),
+    'J': (1 , 8 , LetterType.CONSONANT, 0.030),
+    'K': (1 , 5 , LetterType.CONSONANT, 5.680),
+    'L': (4 , 1 , LetterType.CONSONANT, 5.920),
+    'M': (2 , 3 , LetterType.CONSONANT, 3.810),
+    'N': (6 , 1 , LetterType.CONSONANT, 7.980),
+    'O': (8 , 1 , LetterType.VOWEL,     3.000),
+    'Ö': (8 , 1 , LetterType.VOWEL,     0.380),
+    'P': (2 , 3 , LetterType.CONSONANT, 1.020),
+    'Q': (1 , 10, LetterType.CONSONANT, 6.720),
+    'R': (6 , 1 , LetterType.CONSONANT, 1.840),
+    'S': (4 , 1 , LetterType.CONSONANT, 1.140),
+    'T': (6 , 1 , LetterType.CONSONANT, 5.630),
+    'U': (4 , 1 , LetterType.VOWEL,     3.750),
+    'Ü': (4 , 1 , LetterType.VOWEL,     1.850),
+    'V': (2 , 4 , LetterType.CONSONANT, 0.630),
+    'Y': (2 , 4 , LetterType.CONSONANT, 3.330),
+    'Z': (1 , 10, LetterType.CONSONANT, 1.500),
+    ' ': (2 , 0 , LetterType.UNDEFINED, 0.000)
 }
 
 class LANG_KEYS:

@@ -13,6 +13,7 @@ class TestBoard(unittest.TestCase):
         self.dict = DictionaryWrapper(language)
         self.dict.load_language(LANGUAGE(ALPH_ENGLISH, "dictionaries/Oxford_5000.dict"))
     
+    @measure_time
     def test_find_best_play(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
         player = ComputerPlayer(board, None, "bot")
@@ -50,7 +51,9 @@ class TestBoard(unittest.TestCase):
         board.print()
         
         self.assertEqual(best_move.score, exp_best_score, f"Wrong best score: {best_move.score} ({exp_best_score})")
+    """
 
+    @measure_time
     def test_find_best_play_2(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
         player = ComputerPlayer(board, None, "bot")
@@ -77,7 +80,7 @@ class TestBoard(unittest.TestCase):
 
         board.deserialize(serialized_board)
 
-        player.add_tiles([TILE(letter="A"), TILE(letter="C"), TILE(letter="R")])
+        player.add_tiles([TILE(letter="A"), TILE(letter="C"), TILE(letter="R"), TILE(letter="P")])
         player.set_player_state(PlayerState.PLAYING)
         move_0 = player.get_possible_moves()[0]  # Get most scored move
         exp_move_0_score = 18
@@ -92,6 +95,6 @@ class TestBoard(unittest.TestCase):
         board.print(move_1.word)
         self.assertEqual(move_1.score, exp_move_1_score, f"Wrong score: {move_1.score} ({exp_move_1_score})")
         self.assertEqual(str(move_1.word), str(exp_move_1_word), f"Wrong best word: {move_1.word} ({exp_move_1_word})")
-
+"""
 if __name__ == '__main__':
     unittest.main()

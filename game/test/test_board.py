@@ -9,7 +9,7 @@ class TestBoard(unittest.TestCase):
     def setUp(self):
         language = LANGUAGES['ENG']
         self.dict = DictionaryWrapper(language)
-    
+
     @measure_time
     def test_serialize_words_horizontal(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
@@ -171,7 +171,23 @@ class TestBoard(unittest.TestCase):
             board.place_word(word)
             board.print()
             self.assertEqual(points, exp_score, f"Failed for word: {expected}")
-    
+
+    @measure_time
+    def test_calculate_points_complex_2(self):
+        board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
+
+        word_list = {
+            'SENSORY': ([TILE(7 , 1 , 'S'),TILE(7 , 2 , 'E'),TILE(7 , 3 , 'N'),TILE(7 , 4 , 'S'),TILE(7 , 5 , 'O'),TILE(7, 6, 'R'),TILE(7 , 7 , 'Y')],  22),
+            'ACIDS':   ([TILE(3 , 1 , 'A'),TILE(4 , 1 , 'C'),TILE(5 , 1 , 'I'),TILE(6 , 1 , 'D'),TILE(7 , 1 , 'S')],                                    10)
+        }
+
+        for expected, (word, exp_score) in word_list.items():           
+            points = board.calculate_points(word, False)
+            board.place_word(word)
+            board.print()
+            self.assertEqual(points, exp_score, f"Failed for word: {expected}")
+
+
     def test_load_from_string(self):
         board = Board(self.dict, BOARD_ROW, BOARD_COL, PREMIUM_CELLS)
 

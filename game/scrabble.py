@@ -26,6 +26,7 @@ class Scrabble(Subject):
         super().__init__()
         self.__socketio = socketio
         self.__connected_clients: Dict[str, str] = {}
+        self.__referee_clients: Dict[str, str] = {}
 
         self.__game_id = generate_unique_id()
         self.__game_state: GameState = GameState.UNDEFINED
@@ -59,6 +60,7 @@ class Scrabble(Subject):
 
     def load_language(self, lang_key: LANG_KEYS) -> None:
         self.__dictionary = DictionaryWrapper(LANGUAGES[lang_key])
+        self.__dictionary.load_language(LANGUAGES[lang_key])
 
         self.__tile_bag = TileBag()
         self.__tile_bag.load(self.__dictionary.get_alphabet())
@@ -105,9 +107,20 @@ class Scrabble(Subject):
         if player is None:
             return False
         else:
+            player.widthdraw()
+
+            # If admin leaves the game, end the game
+            if player.get_player_privilege() == PlayerPrivileges.ADMIN:
+                self.__set_game_state(GameState.GAME_OVER)
+
             self.detach(player)
             self.__players.remove(player)
             self.__active_player_count -= 1
+
+            if (player.get_player_state() == PlayerState.PLAYING):
+                self.skip_turn(player_id)
+            self.__update()
+
             return True
 
     def set_player_as_admin(self, player_id: str) -> bool:
@@ -180,21 +193,6 @@ class Scrabble(Subject):
         return self.get_game_state() == GameState.GAME_STARTED
     
     # Player Actions
-
-    def withdraw_player(self, player_id: str) -> bool:
-        print(f"Player {player_id} is about to withdraw from the game.")
-        player = self.found_player(player_id)
-        if player is None:
-            return False
-        else:
-            player.widthdraw()
-            self.__active_player_count -= 1
-
-            # If admin leaves the game, end the game
-            if player.get_player_privilege() == PlayerPrivileges.ADMIN:
-                self.__set_game_state(GameState.GAME_OVER)
-            return True
-    
     def enter_player_to_game(self, player_id: str) -> bool:
         print(f"Player {player_id} is about to enter the game.")
         player = self.found_player(player_id)
@@ -296,10 +294,36 @@ class Scrabble(Subject):
 
         return points
 
+    def get_hint(self, player_id: str, letters: List[LETTER]) -> List[MOVE]:
+        print(f"Player {player_id} is about to request hint: {letters}")
+        if self.__game_state != GameState.GAME_STARTED:
+            return []
+        
+        player = self.found_player(player_id)
+        if player is None:
+            return []
+
+        # Only current player submit its word
+        if not (player.get_player_id() == self.__currentPlayer.get_player_id()):
+            return []
+
+        if letters is None and len(letters) == 0:
+            return []
+        
+        # Get the possible words from the board
+        temp_tiles = []
+        for letter in letters:
+            temp_tiles.append(TILE(letter=letter))
+        possible_words = self.__board.get_possible_moves(temp_tiles)
+        
+        return possible_words
+
     def exchange_letter(self, player_id: str, letter: LETTER) -> bool:
         print(f"Player {player_id} is about to exchange its letter.")
         player = self.found_player(player_id)
-        if player is None: return False
+
+        if player is None or not (player.get_player_state() == PlayerState.PLAYING):
+            return False
 
         newTile = self.__tile_bag.get_random_tile()
         tiles = player.get_rack()
@@ -309,7 +333,7 @@ class Scrabble(Subject):
 
         for tile in tiles:
             if (tile.letter == letter):
-                print("Removing tile from the rack")
+                print(f"Removing tile ({letter}) from the rack")
                 player.remove_from_rack(tile)
                 break
 
@@ -319,7 +343,7 @@ class Scrabble(Subject):
 
         print(player.get_serialized_rack())
 
-        self.next_turn()
+        self.skip_turn(player_id)  # Exchanging letter penalizes the player by skipping the turn
 
         return True
 
@@ -350,7 +374,8 @@ class Scrabble(Subject):
 
         self.next_turn()
         self.__update()
-        self.send_message_to_clients("Player " + player.get_player_name() + " has skipped the turn.")
+        # No need to send message the client that requested the skip
+        self.send_message_to_clients("Player " + player.get_player_name() + " has skipped the turn.", exclude_list=[player.get_player_id()])
         return self.__currentPlayer
     
     def get_winner(self) -> Player:
@@ -393,9 +418,9 @@ class Scrabble(Subject):
                 self.reset_turn_count()
                 self.__currentPlayer = self.get_first_player()
                 self.__currentPlayer.set_player_state(PlayerState.PLAYING)
-                if (self.__currentPlayer.get_player_type() == PlayerType.COMPUTER):
-                    score, tiles = self.__currentPlayer.play_turn()
-                    self.submit(self.__currentPlayer.get_player_name(), tiles)
+                #if (self.__currentPlayer.get_player_type() == PlayerType.COMPUTER):
+                #    score, tiles = self.__currentPlayer.play_turn()
+                #    self.submit(self.__currentPlayer.get_player_name(), tiles)
             
             iter = 0
             while self.__currentPlayer.get_player_state != PlayerState.PLAYING and iter < self.__player_count:
@@ -405,8 +430,9 @@ class Scrabble(Subject):
 
             self.__currentPlayer.set_player_state(PlayerState.PLAYING)
             if (self.__currentPlayer.get_player_type() == PlayerType.COMPUTER):
-                score, tiles = self.__currentPlayer.play_turn()
-                self.submit(self.__currentPlayer.get_player_name(), tiles)
+                pass
+                #score, tiles = self.__currentPlayer.play_turn()
+                #self.submit(self.__currentPlayer.get_player_name(), tiles)
         
     def __on_game_over(self):
         pass
@@ -455,8 +481,14 @@ class Scrabble(Subject):
     def add_sid(self, sid: str, player_id: str) -> None:
         self.__connected_clients[sid] = player_id
 
-    def remove_sid(self, sid: str, player_id: str) -> None:
+    def add_referee_sid(self, sid: str, _: str) -> None:
+        self.__referee_clients[sid] = "REFEREE"
+
+    def remove_sid(self, sid: str, _: str) -> None:
         self.__connected_clients.pop(sid, None)
+
+    def remove_referee_sid(self, sid: str, _: str) -> None:
+        self.__referee_clients.pop(sid, None)
 
     def update_clients(self) -> None:
         players_meta: List[PlayerMeta] = self.get_players_meta()
@@ -470,5 +502,21 @@ class Scrabble(Subject):
             if player is not None:
                 self.__socketio.emit("update-racks", {"racks": player.get_serialized_rack()}, to=sid)
 
-    def send_message_to_clients(self, message: str) -> None:
-        self.__socketio.emit('game-message', {"message": message})
+        # Referee clients can access all players' rack
+        for sid, _ in self.__referee_clients.items():
+            player_racks: Dict[str, Dict[LETTER, int]] = {}
+            for player in self.__players:
+                player_racks[player.get_player_name()] = player.get_serialized_rack()
+            
+            if len(player_racks)>0: self.__socketio.emit("update-rack", {"rackInfo": player_racks}, to=sid)
+
+    def send_message_to_clients(self, message: str, exclude_list: List[str]) -> None:
+        for sid, player_id in self.__connected_clients.items():
+            # Send the message to all connected clients
+            # except the one who is excluded
+            if player_id in exclude_list:
+                continue
+
+            player = self.found_player(player_id)
+            if player is not None:
+                self.__socketio.emit('game-message', {"message": message})

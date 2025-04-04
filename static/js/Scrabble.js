@@ -138,11 +138,11 @@ function mouseUpHandler(event) {
             if (parentNode.contains(tile)) parentNode.removeChild(tile);
 
             newTile.classList.add('placed-tile'); // Add placed-tile class
-            addSelectedTile(letter, tileID, isJoker, cellLocation);
             // If tile is joker open joker selection dialog, otherwise varify the word.
             if (isJoker==='true') {
                 showJokerTileDialog(newTile);
             } else {
+                addSelectedTile(letter, tileID, isJoker, cellLocation);
                 verifyWord(selectedTiles);
             }
             
@@ -281,6 +281,9 @@ function loadJokerTileSelector(myTile) {
         tile.textContent = letter;
         tile.dataset.letter = letter;
         tile.dataset.points = letterPoints.get(letter);
+        tile.dataset.isJoker = true;
+        tile.dataset.id = myTile.getAttribute('tileID');
+        tile.dataset.location = myTile.getAttribute('location');
         
         tile.addEventListener('click', function() {
             if (selectedJokerTile) {
@@ -321,6 +324,8 @@ function loadJokerTileSelector(myTile) {
 
             const dialog = document.getElementById('myJokerDialog');
             dialog.close();
+            addSelectedTile(myTile.getAttribute('value'), myTile.getAttribute('tileID') , myTile.getAttribute('isJoker'), myTile.getAttribute('location'));
+
             verifyWord(selectedTiles);
         } else {
             myTile.textContent = ' ';
@@ -424,6 +429,35 @@ function showExchangeLetterDialog() {
     dialog.showModal();  // Opens the dialog as a modal
 }
 
+function showHint() {
+    if (myPlayer === null) return;
+
+    if (myPlayer.getPlayerState() !== PlayerState.PLAYING) return;
+
+    
+
+    const lettersJson = JSON.stringify(myPlayer.getRack());
+
+    fetch(`${window.location}/request-hint`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: lettersJson
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Hint: ' + data.hint);
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Unknown Error:', error);
+    });
+}
+
 function requestUpdate() {
     console.log('request update...');
     fetch(`${window.location}/request-update`, {
@@ -441,8 +475,6 @@ function requestUpdate() {
 }
 
 function quitGame() {
-    alert('You are about to quit game. Are you sure?');
-
     fetch(`${window.location}/quit-game`, {
         method: 'POST',
         headers: {
@@ -772,7 +804,9 @@ function updateMyPlayer(playersMeta_) {
             // Update player control areas according to its state
             const returnLobbyButton = document.getElementById('returnLobbyButton');
             const requestOrderButton = document.getElementById('requestOrderButton');
+            const exchangeButton = document.getElementById('exchangeButton');
             const revertButton = document.getElementById('revertButton');
+            const hintButton = document.getElementById('hintButton');
             const shuffleButton = document.getElementById('shuffleButton');
             const skipTurnButton = document.getElementById('skipTurnButton');
             const submitButton = document.getElementById('submitButton');
@@ -781,13 +815,17 @@ function updateMyPlayer(playersMeta_) {
 
             if (myPlayer.getPlayerState() != PlayerState.PLAYING) {
                 requestOrderButton.classList.add('blocked');
+                exchangeButton.classList.add('blocked');
                 revertButton.classList.add('blocked');
+                hintButton.classList.add('blocked');
                 skipTurnButton.classList.add('blocked');
                 scrabbleRack.classList.add('blocked');
                 submitButton.classList.add('blocked');
             } else {
                 requestOrderButton.classList.remove('blocked');
+                exchangeButton.classList.remove('blocked');
                 revertButton.classList.remove('blocked');
+                hintButton.classList.remove('blocked');
                 skipTurnButton.classList.remove('blocked');
                 scrabbleRack.classList.remove('blocked');
                 submitButton.classList.remove('blocked');
@@ -891,22 +929,26 @@ function updateBoard(board_) {
     });
 }
 
-function updateMyRack(racks_) {
-    console.log('racks updating...', racks_);
+function updateMyRack(letters) {
+    console.log('rack is updating...', letters);
     const scrabbleRack = document.getElementById('scrabbleRack');
 
     // Clear the scrabbleRack 
     scrabbleRack.innerHTML = '';
     
     // Empty rack check
-    if (!racks_ || Object.keys(racks_).length === 0) return;
+    if (!letters || Object.keys(letters).length === 0) return;
 
-    Object.entries(racks_).forEach(([letter, count]) => {
+    let myLetters = []
+    Object.entries(letters).forEach(([letter, count]) => {
         for (let i = 0; i < count; i++) {
             let tile = createTile(letter);
             scrabbleRack.appendChild(tile);
+            myLetters.push(letter);
         }
     });
+
+    myPlayer.setRack(myLetters);
 }
 
 function showGameMessage(data) {

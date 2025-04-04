@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/scrabble.css') }}">
 
+    <script src="{{ url_for('static', filename='libs/canvas-confetti/confetti.browser.min.js') }}"></script> 
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/Game.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/Player.js') }}"></script> 
@@ -49,6 +50,19 @@
         }
         #revertButton:hover {
             background-color: #87CEEB; /* Slightly darker blue on hover */
+        }
+        #hintButton {
+            background-color: #fffb00; /* Light blue background */
+            border: 2px solid white; /* White border */
+        }
+        #hintButton svg {
+            width: var(--icon-size);
+            height: var(--icon-size);
+            fill: #2d425d;
+            stroke: none; /* Dark blue color for the logo */
+        }
+        #hintButton:hover {
+            background-color: #b6b302; /* Slightly darker yellow on hover */
         }
         #shuffleButton {
             background-color: #dabf52; /* Light yellow background */
@@ -102,7 +116,15 @@
         #returnLobbyButton:hover {
             background-color: #f25433; /* Light blue background */
         }
-
+        #confetti-canvas {
+            position: fixed;
+            width: -webkit-fill-available;
+            height: -webkit-fill-available;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -118,7 +140,7 @@
                 <div></div>
             </div>
         
-            <div class="container">
+            <div class="container" style="position: relative;">
                 <div class="decorative-board" id="decorativeBoard">
                     <script>
                         // Letters for column headers
@@ -245,7 +267,7 @@
             <div class="bottom-container">
                 <div id="rackDiv" style="display: flex; visibility: collapse;">
                     <div class="rack-container">
-                        <div>
+                        <div style="display: grid; margin-left: 5px; margin-right: 5px">
                             <button class="circular-button" id="exchangeButton" title="Exchange">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" ><path d="M320-440v-287L217-624l-57-56 200-200 200 200-57 56-103-103v287h-80ZM600-80 400-280l57-56 103 103v-287h80v287l103-103 57 56L600-80Z"/></svg>
                             </button>
@@ -254,9 +276,14 @@
                             </button>
                         </div>
                         <div class="rack" id="scrabbleRack"></div>
-                        <button class="circular-button" id="revertButton" title="Revert">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m 600,-200 -56,-57 143,-143 H 300 q -75,0 -127.5,-52.5 Q 120,-505 120,-580 120,-655 172.5,-707.5 225,-760 300,-760 h 20 v 80 h -20 q -42,0 -71,29 -29,29 -29,71 0,42 29,71 29,29 71,29 h 387 l -143,-144 56,-56 240,240 z"/></svg>
-                        </button>
+                        <div style="display: grid; margin-left: 5px; margin-right: 5px">
+                            <button class="circular-button" id="revertButton" title="Revert">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m 600,-200 -56,-57 143,-143 H 300 q -75,0 -127.5,-52.5 Q 120,-505 120,-580 120,-655 172.5,-707.5 225,-760 300,-760 h 20 v 80 h -20 q -42,0 -71,29 -29,29 -29,71 0,42 29,71 29,29 71,29 h 387 l -143,-144 56,-56 240,240 z"/></svg>
+                            </button>
+                            <button class="circular-button" id="hintButton" title="Get Hint">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-80q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-200v-80h320v80H320Zm10-120q-69-41-109.5-110T180-580q0-125 87.5-212.5T480-880q125 0 212.5 87.5T780-580q0 81-40.5 150T630-320H330Zm24-80h252q45-32 69.5-79T700-580q0-92-64-156t-156-64q-92 0-156 64t-64 156q0 54 24.5 101t69.5 79Zm126 0Z"/></svg>
+                            </button>
+                        </div>
                     </div>
         
                     <div class="container" style="padding: 10px; margin-left: 50px; margin-top: 10px; margin-bottom: 10px; row-gap: 10px;">
@@ -296,6 +323,26 @@
             </div>
             <button class="exchange-letter-selector-choose-btn">Choose</button>
         </div>
+    </dialog>
+    <dialog id="myBackToLobbyDialog" style="padding: 0px;">
+        <div class="back-to-lobby-window">
+            <p style="font-size: 16px; font-weight: bold">Are you sure you want to go back to the lobby?</p>
+            <div style="display: flex; justify-content: center; gap: 20px;">
+                <button class="back-to-lobby-yes-btn" id="myBackToLobbyDialogConfirmYes">Yes</button>
+                <button class="back-to-lobby-cancel-btn" id="myBackToLobbyDialogConfirmCancel">Cancel</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="myGameOverDialog" style="padding: 0px;">
+        <div id="victoryPanel" style="visibility: collapse;">
+            <h1>Congratulations. You won 🎉</h1>
+            <button id="myGameOverDialogCloseBtn">Close</button>
+        </div>
+        <div class="leader-board" style="margin-top: 80px;">
+            <div class="leader-board-table" id="tableLeaderboard"></div>
+        </div>
+        <canvas id="confetti-canvas"></canvas>
     </dialog>
 </body>
 
@@ -450,16 +497,75 @@ function drop(event) {
 
 // User button events
 
-document.getElementById('returnLobbyButton').addEventListener('click', quitGame);
 document.getElementById('requestOrderButton').addEventListener('click', requestOrder);
 document.getElementById('revertButton').addEventListener('click', revertTiles);
 document.getElementById('exchangeButton').addEventListener('click', showExchangeLetterDialog);
+document.getElementById('hintButton').addEventListener('click', showHint);
 
 document.getElementById('shuffleButton').addEventListener('click', shuffleTiles);
 document.getElementById('skipTurnButton').addEventListener('click', skipTurn);
 document.getElementById('submitButton').addEventListener('click', () => {
     submitWord(selectedTiles);
 });
+
+// Back to lobby confirmation dialog
+const returnLobbyButton = document.getElementById('returnLobbyButton');
+const myBackToLobbyDialog = document.getElementById('myBackToLobbyDialog');
+const myBackToLobbyDialogConfirmYes = document.getElementById('myBackToLobbyDialogConfirmYes');
+const myBackToLobbyDialogConfirmCancel = document.getElementById('myBackToLobbyDialogConfirmCancel');
+    returnLobbyButton.addEventListener('click', () => {
+        myBackToLobbyDialog.showModal();
+    });
+
+    myBackToLobbyDialogConfirmYes.addEventListener('click', () => {
+        quitGame();
+        myBackToLobbyDialog.close();
+    });
+
+    myBackToLobbyDialogConfirmCancel.addEventListener('click', () => {
+        myBackToLobbyDialog.close();
+    });
+
+// Game Over Dialog
+const myGameOverDialogCloseBtn = document.getElementById('myGameOverDialogCloseBtn');
+const canvas = document.getElementById('confetti-canvas');
+const confettiInstance = confetti.create(canvas, { resize: true, useWorker: true });
+
+returnLobbyButton.addEventListener('click', () => {
+    const gameOverDialog = document.getElementById('GameOverDialog');
+    gameOverDialog.showModal();
+
+    // Trigger confetti burst
+    confettiInstance({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+    });
+
+    // Optional: Repeating sparkles
+    let sparkleInterval = setInterval(() => {
+        confettiInstance({
+        particleCount: 20,
+        spread: 50,
+        origin: {
+            x: Math.random(),
+            y: Math.random() / 2
+        }
+        });
+    }, 500);
+
+    // Stop sparkles when dialog closes
+    gameOverDialog.addEventListener('close', () => {
+        clearInterval(sparkleInterval);
+    }, { once: true });
+});
+
+myGameOverDialogCloseBtn.addEventListener('click', () => {
+    const myGameOverDialog = document.getElementById('myGameOverDialog');
+    myGameOverDialog.close();
+    quitGame();
+});
+
 
 </script>
 

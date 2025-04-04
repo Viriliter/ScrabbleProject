@@ -27,13 +27,13 @@
     z-index: 2; /* On top of the decorative board */
 }
 .decorative-board {
-    position: fixed;
+    position: absolute;
     z-index: 1; /* Behind the tiles board */
 }
 .leader-board {
     display: grid;
     width: auto;
-    height: 300px;
+    height: inherit;
     gap: 10px;
     background-color: var(--cell-color);
     align-items: center;
@@ -46,6 +46,9 @@
     grid-template-columns: repeat(1, 100%);
     grid-template-rows: repeat(5, var(--tile-size));
     row-gap: 10px;
+    margin-left: 5px;
+    margin-right: 5px;
+    margin-bottom: 10px;
 }
 .player-item {
     width: auto;
@@ -389,4 +392,47 @@ dialog::backdrop {
 
 .exchange-letter-selector-tile.unselected {
     opacity: 0.5;
+}
+
+.back-to-lobby-window {
+    position: relative;
+    background-color: var(--cell-color);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    color: white;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.back-to-lobby-yes-btn {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 20px;
+    background-color: #8d8d8d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.back-to-lobby-yes-btn:hover {
+    background-color: #505050;
+}
+
+.back-to-lobby-cancel-btn {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 20px;
+    background-color: #3767ba;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.back-to-lobby-cancel-btn:hover {
+    background-color: #505050;
 }

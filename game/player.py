@@ -52,6 +52,7 @@ class Player(Observer):
             return False
 
     def set_player_state(self, player_state: PlayerState) -> None:
+        if self._player_state == player_state: return
         print(f'Player ({self._player_id}) State:  {PlayerState.to_string(self._player_state)} -> {PlayerState.to_string(player_state)}')
         self._player_state = player_state
 

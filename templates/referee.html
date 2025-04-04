@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrabble Game (Referee)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/scrabble.css') }}">
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/Game.js') }}"></script> 
+    <script src="{{ url_for('static', filename='js/Player.js') }}"></script> 
+    <script src="{{ url_for('static', filename='js/Scrabble.js') }}"></script> 
+
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background-color);
+            font-family: 'Eurostile', sans-serif;
+        }
+
+        /* Objects */
+        #returnLobbyButton {
+            width: 100px;
+            height: 60px;
+            background-color: red; /* Light blue background */
+            border: 2px solid white; /* White border */
+        }
+        #returnLobbyButton svg {
+            width: var(--icon-size);
+            height: var(--icon-size);
+            fill: white;
+            stroke: none;
+        }
+        #returnLobbyButton:hover {
+            background-color: #f25433; /* Light blue background */
+        }
+        .points-box {
+            width: inherit;
+            height: 40px;
+            padding: 10px 20px;
+            align-content: center;
+            background-color: var(--cell-color);
+            color: var(--text-color);
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .player-name-field {
+            background-color: var(--cell-color);
+            color: var(--text-color);
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px 20px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container" style="display: grid; grid-template-columns: repeat(2, auto); grid-template-rows: repeat(1, auto); align-items: start;">
+        <div class="container">
+            <div class="top-container">
+                <div class="points-box" id="pointBox">
+                    <span id="myGameStatus"></span>
+                </div>
+                <div></div>
+            </div>
+        
+            <div class="container" style="position: relative;">
+                <div class="decorative-board" id="decorativeBoard">
+                    <script>
+                        // Letters for column headers
+                        const columnHeaders = ['', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', ''];
+                        const rowHeaders = ['', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', ''];
+                        
+                        // Define special cells with their corresponding full labels
+                        const specialCells = {
+                            '0,0': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '0,7': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '0,14': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '7,0': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '7,14': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '14,0': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '14,7': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            '14,14': { type: 'triple-word', text: 'TRIPLE WORD' },
+                            
+                            '1,5': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '1,9': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '5,1': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '5,5': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '5,9': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '5,13': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '9,1': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '9,5': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '9,9': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '9,13': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '13,5': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            '13,9': { type: 'triple-letter', text: 'TRIPLE LETTER' },
+                            
+                            '7,7': { type: 'center-cell', text: '★' },
+                            '1,1': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '2,2': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '3,3': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '4,4': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '10,10': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '11,11': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '12,12': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '13,13': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '1,13': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '2,12': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '3,11': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '4,10': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '10,4': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '11,3': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '12,2': { type: 'double-word', text: 'DOUBLE WORD' },
+                            '13,1': { type: 'double-word', text: 'DOUBLE WORD' },
+    
+                            '0,3': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '0,11': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '2,6': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '2,8': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '3,0': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '3,7': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '3,14': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '6,2': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '6,6': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '6,8': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '6,12': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '7,3': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '7,11': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '8,2': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '8,6': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '8,8': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '8,12': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '11,0': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '11,7': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '11,14': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '12,6': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '12,8': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '14,3': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                            '14,11': { type: 'double-letter', text: 'DOUBLE LETTER' },
+                        };
+    
+                        for (let row = 0; row < 17; row++) {
+                            for (let col = 0; col < 17; col++) {
+                                if (row == 0) {
+                                    const letter = columnHeaders[col];
+                                    document.write(`<div class="header-cell">${letter}</div>`);
+                                    continue;                       
+                                } 
+                                else if (row==16) {
+                                    const letter = columnHeaders[col];
+                                    document.write(`<div class="header-cell">${letter}</div>`);
+                                    continue;                       
+                                }
+                                else {
+                                    if (col == 0) {
+                                        document.write(`<div class="header-cell">${row}</div>`);
+                                        continue;                       
+                                    }
+                                    else if (col == 16) {
+                                        document.write(`<div class="header-cell">${row}</div>`);
+                                        continue;                       
+                                    }
+                                }
+    
+                                const cellInfo = specialCells[`${row-1},${col-1}`];
+                                const cellClass = cellInfo ? cellInfo.type : '';
+                                const cellText = cellInfo ? cellInfo.text : '';
+                                document.write(`<div class="cell ${cellClass}">${cellText}</div>`);
+                            }
+                        }
+                    </script>
+                </div>
+                <div class="game-board" id="gameBoard">
+                    <!-- Generate the game board cells -->
+                    <script>
+                        for (let row = 0; row < 17; row++) {
+                            for (let col = 0; col < 17; col++) {
+                                
+                                let cellLocation = '';
+                                if (row == 0 || row == 16 || col == 0 || col == 16) {
+                                } else {
+                                    cellLocation = 'cell_' + `${columnHeaders[col]}` + `${rowHeaders[row]}`
+                                }
+                                document.write(`<div id="${cellLocation}" location="${cellLocation}" class="transparent-cell" data-row="${row+1}" data-col="${col+1}"></div>`);
+                            }
+                        }
+                    </script>
+                </div>
+            </div>
+            
+            <div class="bottom-container">
+                <div id="rackDiv" style="display: grid; visibility: visible;">
+                    <div class="rack-container" style="margin-top: 10px">
+                        <div class="player-name-field" id="scrabbleRackNameField_0"></div>
+                        <div class="rack" id="scrabbleRack_0"></div>
+                    </div>
+                    <div class="rack-container" style="margin-top: 10px">
+                        <div class="player-name-field" id="scrabbleRackNameField_1"></div>
+                        <div class="rack" id="scrabbleRack_1" style="margin-top: 10px"></div>
+                    </div>
+                    <div class="rack-container" style="margin-top: 10px">
+                        <div class="player-name-field" id="scrabbleRackNameField_2"></div>
+                        <div class="rack" id="scrabbleRack_2" style="margin-top: 10px"></div>
+                    </div>
+                    <div class="rack-container" style="margin-top: 10px">
+                        <div class="player-name-field" id="scrabbleRackNameField_3"></div>
+                        <div class="rack" id="scrabbleRack_3" style="margin-top: 10px"></div>
+                    </div>
+        
+                </div>
+            </div>
+        </div>
+        <div class="leader-board" style="margin-top: 80px;">
+            <h1 style="color: var(--text-color); text-align: center; ">LEADERBOARD</h1>
+            <div class="leader-board-table" id="tableLeaderboard"></div>
+        </div>
+    </div>
+</body>
+
+<script>
+
+const letterPoints = new Map([
+    ['A', 1], ['B', 3], ['C', 3], ['D', 2], ['E', 1],
+    ['F', 4], ['G', 2], ['H', 4], ['I', 1], ['J', 8],
+    ['K', 5], ['L', 1], ['M', 3], ['N', 1], ['O', 1],
+    ['P', 3], ['Q', 10], ['R', 1], ['S', 1], ['T', 1],
+    ['U', 1], ['V', 4], ['W', 4], ['X', 8], ['Y', 4],
+    ['Z', 10], [' ', 0]
+]);
+
+const letterCounts = new Map([
+    ['A', 9], ['B', 2], ['C', 2], ['D', 4], ['E', 12],
+    ['F', 2], ['G', 3], ['H', 2], ['I', 9], ['J', 1],
+    ['K', 1], ['L', 4], ['M', 2], ['N', 6], ['O', 8],
+    ['P', 2], ['Q', 1], ['R', 6], ['S', 4], ['T', 6],
+    ['U', 4], ['V', 2], ['W', 2], ['X', 1], ['Y', 2],
+    ['Z', 1], [' ', 2]
+]);
+
+const socket = io.connect(`${window.location.origin}`);
+
+// Websocket events
+
+socket.on('update-game', function(data) {
+    console.log('update-game::::');
+    
+    if (myGame === null || data.gameMeta == null) return;
+    myGame.setGameState(data.gameMeta.GAME_STATE);
+
+    const myGameStatus = document.getElementById('myGameStatus');
+
+    switch (myGame.getGameState()) {
+        case (GameState.WAITING_FOR_PLAYERS):
+            myGameStatus.innerText = "Waiting for players to join...";
+            break;
+        case (GameState.PLAYER_ORDER_SELECTION):
+            myGameStatus.innerText = "Player order selection...";
+            break;
+        case (GameState.GAME_STARTED):
+            myGameStatus.innerText = "Game started.";
+            break;
+        case (GameState.GAME_OVER):
+            myGameStatus.innerText = "Game is over.";
+            break;
+    }
+    oldGameState = myGame.getGameState();
+
+});
+
+socket.on('update-players', function(data) {
+    console.log('update-players::::');
+
+    if (!data || data.playersMeta.length === 0) {
+        return;
+    }
+
+    updateLeaderboard(data.playersMeta);
+
+});
+
+socket.on('update-board', function(data) {
+    console.log('update-board::::');
+    updateBoard(data.board);
+});
+
+socket.on('update-rack', function(data) {
+    console.log('update-racks::::', data.rackInfo);
+    const entries = Object.entries(data.rackInfo);
+
+    const scrabbleRack_0 = document.getElementById('scrabbleRack_0');
+    const scrabbleRackNameField_0 = document.getElementById('scrabbleRackNameField_0');
+    const scrabbleRack_1 = document.getElementById('scrabbleRack_1');
+    const scrabbleRackNameField_1 = document.getElementById('scrabbleRackNameField_1');
+    const scrabbleRack_2 = document.getElementById('scrabbleRack_2');
+    const scrabbleRackNameField_2 = document.getElementById('scrabbleRackNameField_2');
+    const scrabbleRack_3 = document.getElementById('scrabbleRack_3');
+    const scrabbleRackNameField_3 = document.getElementById('scrabbleRackNameField_3');
+    const elements = [[scrabbleRack_0, scrabbleRackNameField_0], [scrabbleRack_1, scrabbleRackNameField_1], [scrabbleRack_2, scrabbleRackNameField_2], [scrabbleRack_3, scrabbleRackNameField_3]];
+
+
+
+    for (let i = 0; i < elements.length && i < entries.length; i++) {
+        const [playerName, rack] = entries[i];
+        updateRack(rack, elements[i], playerName);
+    }
+});
+
+socket.on('game-message', function(data) {
+    console.log('game-message::::');
+    showGameMessage(data);
+});
+
+
+function getUrlParams() {
+    const path = window.location.pathname;
+    const pathParts = path.split('/');
+    return {
+        game_id: pathParts[2],
+        player_id: pathParts[3]
+    };
+}
+
+window.onload = function() {
+    const urlParams = getUrlParams();
+    const gameID = urlParams.game_id;
+    const playerID = urlParams.player_id;
+
+    console.log(`Game ID: ${gameID}`);
+    console.log(`Player ID: ${playerID}`);
+
+    // Initialize game and player objects
+    myGame = new Game(gameID);
+
+    // This will update game window
+    // Need to put some delay since socket connections are not properly handled during page load
+    setTimeout(requestUpdate, 500);  // 500ms
+};
+
+function updateRack(tiles, elements, playerName) {
+    // Clear the scrabbleRack 
+    let scrabbleRack = elements[0];
+    let scrabbleRackNameField = elements[1];
+
+    scrabbleRackNameField.innerText = playerName;
+
+    scrabbleRack.innerHTML = '';
+    
+    // Empty rack check
+    if (!tiles || Object.keys(tiles).length === 0) return;
+
+    Object.entries(tiles).forEach(([letter, count]) => {
+        let myLetters = []
+        for (let i = 0; i < count; i++) {
+            let tile = createTile(letter);
+            tile.classList.add('blocked');
+            scrabbleRack.appendChild(tile);
+        }
+    });
+}
+
+</script>
+
+</html>

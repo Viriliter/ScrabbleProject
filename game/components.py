@@ -18,43 +18,45 @@ class TileBag:
     def __init__(self):
         self.__reference_tiles: ALPHABET = {}
         self.__tiles: ALPHABET = {}
-        self.__remaning_tiles: int = 0
+        self.__remaining_tiles: int = 0
         self.__picked_letters: List[LETTER] = []
 
     def clear(self) -> None:
         self.__reference_tiles = {}
         self.__tiles = {}
-        self.__remaning_tiles = 0
+        self.__remaining_tiles = 0
         self.__picked_letters = []
 
     def load(self, alphabet: ALPHABET) -> None:
         self.clear()
 
         self.__reference_tiles = alphabet
-        for letter, (count, points) in alphabet.items():
+        for letter, (count, points, _, _) in alphabet.items():
             if letter in self.__tiles:
                 self.__tiles[letter] = (self.__tiles[letter][0] + count, points)
             else:
                 self.__tiles[letter] = (count, points)
-            self.__remaning_tiles += count
+            self.__remaining_tiles += count
 
     def get_random_tile(self) -> Optional[TILE]:
-        if self.__remaning_tiles == 0:
+        if self.__remaining_tiles == 0:
             return None  # Bag is empty
-        
-        # Randomly pick a letter
-        letter = random.choice(list(self.__tiles.keys()))
+
+        # Randomly pick a letter according to its occurance weight
+        letters, weights = zip(*[(letter, count) for letter, (count, _) in self.__tiles.items()])
+
+        letter = random.choices(letters, weights=weights, k=1)[0]
         count, points = self.__tiles[letter]
-        
+
         # Decrease the count of the letter in the bag
         if count > 1:
             self.__tiles[letter] = (count - 1, points)
         else:
             del self.__tiles[letter]  # Remove letter if no more left
-        
-        self.__remaning_tiles -= 1
 
-        is_blank = True if letter == BLANK_LETTER else False
+        self.__remaining_tiles -= 1
+
+        is_blank = (letter == BLANK_LETTER)
         return TILE(-1, -1, letter, points, is_blank, False)
 
     def put_back_letter(self, letter: LETTER) -> None:
@@ -63,10 +65,10 @@ class TileBag:
             self.__tiles[letter] = (count + 1, points)
         else:
             self.__tiles[letter] = (1, self.__reference_tiles[letter][1])
-        self.__remaning_tiles += 1
+        self.__remaining_tiles += 1
 
     def get_remaining_tiles(self) -> int:
-        return self.__remaning_tiles
+        return self.__remaining_tiles
 
     def pick_letter_for_order(self) -> LETTER:
         available_letters = set(self.__tiles.keys()) - set(self.__picked_letters)
@@ -96,8 +98,9 @@ class Rack:
 
     def remove_tile(self, tile: TILE) -> None:
         for i, t in enumerate(self.__container):
+            print(f"{t.letter}({t.is_blank})==={tile.letter}({tile.is_blank})  is_similar:{t.is_similar(tile)}")
             if t.is_similar(tile):
-                self.__container.remove(t)
+                del self.__container[i]
                 break
 
     def get_rack_length(self) -> int:
@@ -182,6 +185,27 @@ class DictionaryWrapper:
 
     def get_alphabet(self) -> ALPHABET:
         return self.__alphabet
+
+    def get_vowels(self) -> List[LETTER]:
+        vowels = []
+        for letter in self.__alphabet.keys():
+            if (letter==BLANK_LETTER): continue
+            if self.__alphabet[letter][2] == LetterType.VOWEL:
+                vowels.append(letter)
+        return vowels
+
+    def get_consonants(self) -> List[LETTER]:
+        consonants = []
+        for letter in self.__alphabet.keys():
+            if (letter==BLANK_LETTER): continue
+            if self.__alphabet[letter][2] == LetterType.CONSONANT:
+                consonants.append(letter)
+        return consonants
+
+    def get_letter_frequency(self, letter: LETTER) -> float:
+        if letter in self.__alphabet:
+            return self.__alphabet[letter][3]
+        return 0
 
     def get_all_letters(self) -> List[LETTER]:
         out: List[LETTER] = []
@@ -288,7 +312,6 @@ class Board:
         self._cross_checks: List[List[List[List[str]]]] = []
         self.best_score: int = 0
         self.best_moves: List[MOVE] = []
-
 
         self.clear()
 
@@ -421,8 +444,13 @@ class Board:
 
     @staticmethod
     def get_bonus(ct: CT) -> Tuple[int, int]:
+        """
+        @brief: Get the bonus points for the cell type
+        @param ct: Cell type
+        @return: Tuple of (letter multiplier, word multiplier)
+        """
         if ct == CT.DOUBLE_LETTER:
-            return (2, 1)  # Letter Multiplier, Word Multiplier 
+            return (2, 1)
         elif ct == CT.TRIPLE_LETTER:
             return (3, 1)
         elif ct == CT.DOUBLE_WORD:
@@ -445,7 +473,7 @@ class Board:
             is_word_in_center = False
             for tile in word:
                 if not self.check_boundary(tile): return 0
-                if not self.__cells.is_empty(tile.row, tile.col): return 0
+                #if not self.__cells.is_empty(tile.row, tile.col): return 0
                 if tile.row == self.midrow and tile.col == self.midcol: is_word_in_center = True
 
             # If the center cell is empty and the word should be placed on the center
@@ -459,7 +487,7 @@ class Board:
 
             o_words: List[Dict[str, int]] = []
             completed_word = self.complete_word(sorted_[0].row, sorted_[0].col, 0, 1, sorted_)
-            
+
             score = self.score_play(completed_word[-1].row, completed_word[-1].col, 0, 1, completed_word, o_words)
             #print(f"Horizontal Score: {score} words : {o_words}")
             # Check all founded words are valid
@@ -774,7 +802,7 @@ class Board:
                 
         return (min_distance, nearest_premium) if min_distance >= 0 else (None, None)
 
-    def compute_cross_checks(self, available: List[LETTER]) -> None:
+    def _compute_cross_checks(self, available: List[LETTER]) -> None:
         """
         @brief Determine which letters can fit in each square and form a valid
         horizontal or vertical cross word.
@@ -838,7 +866,7 @@ class Board:
 
         self._cross_checks = x_checks[:]
 
-    def forward(self, row: int, col: int, 
+    def _forward(self, row: int, col: int, 
                 drow: int, dcol: int, 
                 rack_tiles: List[TILE], tiles_played: int, 
                 d_node: LetterNode, word_so_far: List[TILE]) -> None:
@@ -869,12 +897,12 @@ class Board:
                 self.best_score = score
                 heapq.heappush(self.best_moves, MOVE(score, word_so_far[:]))
 
-                self.print(word_so_far)
-
-                print("*************")
-                print("score:", score)
-                print("word_so_far:", word_so_far)
-                print("*************")
+                #self.print(word_so_far)
+                #
+                #print("*************")
+                #print("score:", score)
+                #print("word_so_far:", word_so_far)
+                #print("*************")
         
         available = []  # List of letters that can be extended with
         played_tile = 0
@@ -906,14 +934,14 @@ class Board:
             
             for post in d_node.postNodes:
                 if post.letter == letter:
-                    self.forward(erow, ecol, 
+                    self._forward(erow, ecol, 
                                  drow, dcol, 
                                  shrunk_rack, tiles_played + played_tile, 
                                  post, word_so_far)
             
             word_so_far.pop()
 
-    def back(self, row: int, col: 
+    def _back(self, row: int, col: 
              int, drow: int, dcol: int, 
              rack_tiles: List[TILE], tiles_played: int, anchor_node: LetterNode, 
              d_node: LetterNode, word_so_far: List[TILE]):
@@ -952,8 +980,7 @@ class Board:
         
         # Head recursion to explore longer words first
         for letter in available:
-            shrunk_rack = rack_tiles
-            #FIXME shrunk_rack = rack_tiles[:]
+            shrunk_rack = rack_tiles[:]
             if played_tile > 0:
                 # Letter came from the rack
                 tile = next((t for t in shrunk_rack if t.letter == letter), None) or next((t for t in shrunk_rack if t.is_blank), None)
@@ -963,14 +990,14 @@ class Board:
 
                 # Placement is not used in score calculation
                 word_so_far.insert(0, TILE(erow, ecol, letter, tile.point, tile.is_blank))
-                shrunk_rack = [t for t in shrunk_rack if t != tile]
+                shrunk_rack = [t for t in shrunk_rack if t.is_similar(tile)]
             else:
                 # Letter already on the self
                 word_so_far.insert(0, self.at(erow, ecol))
 
             for pre in d_node.preNodes:
                 if pre.letter == letter:
-                    self.back(erow, ecol, 
+                    self._back(erow, ecol, 
                               drow, dcol, 
                               shrunk_rack, tiles_played + played_tile, anchor_node, 
                               pre, word_so_far)
@@ -980,7 +1007,7 @@ class Board:
         # If this is the start of a valid word and we're at the board edge or an empty cell
         #FIXME if not d_node.preNodes and (erow < 0 or ecol < 0 or self.__cells.is_empty(erow, ecol)):
         if len(d_node.preNodes) == 0 and (erow < 0 or ecol < 0 or self.__cells.is_empty(erow, ecol)):
-            self.forward(row + drow * (len(word_so_far) - 1),
+            self._forward(row + drow * (len(word_so_far) - 1),
                          col + dcol * (len(word_so_far) - 1),
                          drow, dcol,
                          rack_tiles, tiles_played,
@@ -1020,7 +1047,7 @@ class Board:
                         placement.row = self.midrow if drow == 0 else pos * drow
                     
                     print("£££££££££££££")
-                    PRINT_WORD(best_word)
+                    TILE.print_word(best_word)
                     print("£££££££££££££")
 
                     best_word = placements
@@ -1054,7 +1081,7 @@ class Board:
                         # What letters can be used to form a valid cross word? 
                         # The whole alphabet if the rack contains a blank, the rack otherwise.
                         available = self.__dictionary.get_all_letters() if any(t.is_blank for t in rack_tiles) else [t.letter for t in rack_tiles]
-                        self.compute_cross_checks(available)
+                        self._compute_cross_checks(available)
                         anchored = True
 
                     anchor_tile = self.at(row, col)
@@ -1062,13 +1089,13 @@ class Board:
                     roots = self.__dictionary.get_sequence_roots(anchor_tile.letter)
                     for anchor_node in roots:
                         # Try and back up then forward through the dictionary to find longer sequences across
-                        self.back(row, col, 0, 1,
+                        self._back(row, col, 0, 1,
                                          rack_tiles, 0,
                                          anchor_node, anchor_node,
                                          [ anchor_tile ])
 
                         # down
-                        self.back(row, col, 1, 0,
+                        self._back(row, col, 1, 0,
                                          rack_tiles, 0,
                                          anchor_node, anchor_node,
                                          [ anchor_tile ])

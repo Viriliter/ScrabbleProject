@@ -17,10 +17,13 @@ class Player {
     playerState = PlayerState.UNDEFINED;
     orderLetter = null;
     points = 0;
+    rack = null;
+
 
     constructor(playerID, playerName) {
         this.playerID = playerID;
         this.playerName = playerName;
+        this.rack = [];
     }
 
     getPlayerID() {
@@ -79,4 +82,11 @@ class Player {
         this.points = points;
     }
 
+    getRack() {
+        return this.rack;
+    }
+
+    setRack(rack) {
+        this.rack = rack;
+    }
 }
