@@ -2,6 +2,12 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 
 class Subject:
+    """
+    @brief Subject class representing a subject in the observer pattern.
+    @note: This class allows observers to attach and detach themselves, and notifies them of changes.
+    @param _observers: List of observers attached to the subject.
+    @note: The observers are notified when the subject changes.
+    """
     def __init__(self):
         self._observers: List[Observer] = []
 
@@ -30,6 +36,12 @@ class Subject:
 
 
 class Observer(ABC):
+    """
+    @brief Observer class representing an observer in the observer pattern.
+    @note: This class allows observers to listen to notifications from the subject.
+    @param _subject: The subject that the observer is observing.
+    @param __lock: A lock to prevent multiple notifications at the same time.
+    """
     def __init__(self):
         self._subject: Subject = None
         self.__lock = False

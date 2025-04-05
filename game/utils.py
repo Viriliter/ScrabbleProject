@@ -15,12 +15,22 @@ def generate_unique_id(length=8) ->str :
     return unique_id
 
 def serialize_dict(d: Dict[Any, Any]) -> Dict[str, Any]:
+    """
+    @brief Convert a dictionary with non-string keys to a dictionary with string keys.
+    @param d: The dictionary to be serialized.
+    @return: A new dictionary with string keys.
+    """
     r = {}
     for key, value in d.items():
         r[str(key)] = value
     return r
 
 def verbalize(tiles: List[Tuple[LETTER, str, str]]) -> WORD:
+    """
+    @brief Convert a list of tiles into a WORD object.
+    @param tiles: A list of tuples containing the letter, row, and column.
+    @return: A WORD object representing the tiles.
+    """
     word: WORD = []
     for tile in tiles:
         letter = tile["letter"]
@@ -40,12 +50,22 @@ def verbalize(tiles: List[Tuple[LETTER, str, str]]) -> WORD:
     return word
 
 def get_absolute_path(relative_path: str) -> str:
+    """
+    @brief Get the absolute path of a file relative to the current script.
+    @param relative_path: The relative path to the file.
+    @return: The absolute path of the file.
+    """
     parent_dir = Path(__file__).resolve().parent.parent
     absolute_path = (parent_dir / relative_path).resolve()
 
     return str(absolute_path)
 
 def measure_time(func):
+    """
+    @brief Decorator to measure the execution time of a function.
+    @param func: The function to be decorated.
+    @return: A wrapper function that measures the execution time.
+    """
     def wrapper(*args, **kwargs):
         start_time = time.perf_counter_ns()
         result = func(*args, **kwargs)

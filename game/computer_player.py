@@ -53,7 +53,7 @@ class ComputerPlayer(Player):
 
     def play_turn(self) -> Tuple[Optional[int], Optional[WORD]]:
         """
-        Play a turn and return the best move to play
+        @brief Play a turn and return the best move to play.
         @return Score and word to play
         """
         if not (self._player_state == PlayerState.PLAYING):
@@ -69,14 +69,14 @@ class ComputerPlayer(Player):
     
     def get_possible_moves(self) -> List[MOVE]:
         """
-        Get a list of possible moves to play
+        @brief Get a list of possible moves to play.
         @return List of possible moves
         """
         return self._board.get_possible_moves(self._rack.get_rack())
 
     def get_sacrificable_letter(self) -> Optional[LETTER]:
         """
-        Get the letter that is most likely to be sacrificed
+        @brief Get the letter that is most likely to be sacrificed.
         @param tiles: List of tiles in the rack
         @return The letter that is most likely to be sacrificed
         """
@@ -139,7 +139,7 @@ class ComputerPlayer(Player):
 
     def choose_best_move(self) -> MOVE:
         """
-        Choose the best move based on immediate reward and future considerations
+        @brief Choose the best move based on immediate reward and future considerations.
         @return Best move to play
         """
         possible_moves = self.get_possible_moves()
@@ -153,7 +153,11 @@ class ComputerPlayer(Player):
         return best_move
     
     def evaluate_move(self, move: MOVE) -> int:
-        """Evaluate a move based on immediate reward and future probabilistic future estimation"""
+        """
+        @brief Evaluate a move based on immediate reward and future probabilistic future estimation.
+        @param move: The move to evaluate
+        @return The score of the move
+        """
         self.update_knowledge()
         
         immediate_reward = move.score
@@ -163,7 +167,9 @@ class ComputerPlayer(Player):
         return immediate_reward + strategic_value + self.gamma * future_value
 
     def update_knowledge(self) -> None:
-        """Update knowledge of played tiles and remaining bag count"""
+        """
+        @brief Update knowledge of played tiles and remaining bag count
+        """
         # Add tiles from our rack
         self.__observed_tiles.clear()
         for letter in self._rack.get_letters():
@@ -176,14 +182,22 @@ class ComputerPlayer(Player):
         self.tiles_in_bag = self._tile_bag.get_remaining_tiles()
         
     def get_tile_probability(self, letter: LETTER) -> float:
-        """Get probability that a given tile is in the bag"""
+        """
+        @brief Get probability that a given tile is in the bag.
+        @param letter: The letter to check
+        @return Probability of the letter being in the bag
+        """
         
         remaining_in_bag = (self._tile_bag.get_alphabet().get(letter, (0,0))[0] - 
                            self.__observed_tiles.get(letter, 0))
         return max(0, remaining_in_bag) / self.tiles_in_bag if self.tiles_in_bag > 0 else 0
     
     def estimate_future_value(self, move: MOVE) -> float:
-        """Revised future value estimation using probabilities"""
+        """
+        @brief Revised future value estimation using probabilities.
+        @param move: The move to evaluate
+        @return Estimated future value of the move
+        """
         tiles_used = len(move.word)
         num_new_tiles = min(tiles_used, self.tiles_in_bag)
         
@@ -205,7 +219,10 @@ class ComputerPlayer(Player):
         return future_value * balance_factor
     
     def calculate_balance_probability(self) -> float:
-        """Estimate probability of getting a balanced rack"""
+        """
+        @brief Estimate probability of getting a balanced rack.
+        @return Probability of getting a balanced rack.
+        """
         # Count unseen vowels and consonants
         unseen_vowels = 0
         unseen_consonants = 0
@@ -269,7 +286,11 @@ class ComputerPlayer(Player):
         return strategic_value
 
     def _count_opened_premiums(self, move: MOVE) -> int:
-        """Counts how many premium squares the move exposes"""
+        """
+        @brief Counts how many premium squares the move exposes.
+        @param move: The move to evaluate
+        @return Number of opened premium squares
+        """
         count = 0
         # Implementation depends on your board representation
         # For each tile placed:
@@ -278,7 +299,11 @@ class ComputerPlayer(Player):
         return count
 
     def _evaluate_board_position(self, move: MOVE) -> int:
-        """Scores positional advantages"""
+        """
+        @brief Scores positional advantages.
+        @param move: The move to evaluate
+        @return Score based on board position
+        """
         score = 0
         
         # Bonus for creating parallel plays
@@ -296,13 +321,21 @@ class ComputerPlayer(Player):
         return score
 
     def _get_remaining_rack(self, move: MOVE) -> List[TILE]:
-        """Returns tiles that will remain after the move"""
+        """
+        @brief Returns tiles that will remain after the move.
+        @param move: The move to evaluate
+        @return List of remaining tiles in the rack
+        """
         used_tiles = move.word
         remaining = [t for t in self._rack.get_rack() if not any(t.is_equal(used_tile) for used_tile in used_tiles)]
         return remaining
 
     def _calculate_rack_penalty(self, remaining_tiles) -> int:
-        """Penalizes bad rack compositions"""
+        """
+        @brief Penalizes bad rack compositions.
+        @param remaining_tiles: The tiles remaining in the rack
+        @return Total penalty for the rack
+        """
         penalty = 0
         
         # 1. Count vowels
@@ -329,12 +362,27 @@ class ComputerPlayer(Player):
         return penalty
 
     def _creates_parallel_play(self, move: MOVE) -> bool:
+        """
+        @brief Checks if the move creates parallel plays.
+        @param move: The move to evaluate
+        @return True if it creates parallel plays, False otherwise
+        """
         return False
         
     def _blocks_opponent(self, move: MOVE) -> bool:
+        """
+        @brief Checks if the move blocks opponent's potential plays.
+        @param move: The move to evaluate
+        @return True if it blocks opponent, False otherwise
+        """
         return False
         
     def _vowels_near_premiums(self, move: MOVE) -> bool:
+        """
+        @brief Checks if the move is close to premium cell.
+        @param move: The move to evaluate
+        @return True if vowel is near to premiums cell, False otherwise
+        """
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
         
         for tile in move.word:  # Assuming each placement is (row, col, letter)

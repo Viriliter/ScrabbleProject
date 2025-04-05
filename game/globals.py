@@ -178,14 +178,14 @@ class TILE:
 
     def is_equal(self, other: 'TILE') -> bool:
         """
-        @brief: Check if the tiles are at same location and have same letter
+        @brief Check if the tiles are at same location and have same letter
         """
         return (self.row == other.row and self.col == other.col and 
                 self.letter == other.letter and self.is_blank == other.is_blank)
 
     def is_similar(self, other: 'TILE') -> bool:
         """
-        @brief: Check if the tiles have same letter an is_blank
+        @brief Check if the tiles have same letter an is_blank
         """
         if self.is_blank and other.is_blank:
             return True
@@ -196,7 +196,7 @@ class TILE:
     @staticmethod
     def print_word(word: 'WORD', file=None) -> None:
         """
-        @brief: Print the word
+        @brief Print the word
         @param word: List of tiles
         @param file: File to write the word
         """
@@ -354,5 +354,5 @@ class LANG_KEYS:
     ENG = "ENG"
     TUR = "TUR"
 
-LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "dictionaries/CSW2021_English.dict"),
+LANGUAGES: Dict[LANG_KEYS, LANGUAGE] = {LANG_KEYS.ENG: LANGUAGE(ALPH_ENGLISH, "dictionaries/Oxford_5000.dict"),
                                         LANG_KEYS.TUR: LANGUAGE(ALPH_TURKISH, "dictionaries/British_English.dict")}
