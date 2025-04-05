@@ -9,6 +9,7 @@ class TestBoard(unittest.TestCase):
     def setUp(self):
         language = LANGUAGES['ENG']
         self.dict = DictionaryWrapper(language)
+        self.dict.load_language(LANGUAGE(ALPH_ENGLISH, "dictionaries/CSW2021_English.dict"))
 
     @measure_time
     def test_serialize_words_horizontal(self):
@@ -142,11 +143,11 @@ class TestBoard(unittest.TestCase):
             'PYTHON':    ([TILE(0 , 0 , 'P'),TILE(1 , 0 , 'Y'),TILE(2 , 0 , 'T'),TILE(3 , 0 , 'H'),TILE(4 , 0 , 'O'),TILE(5 , 0 , 'N')]                                                   , 0 ),
         }
         expected, (word, exp_score) = list(word_list.items())[0]
-        points = board.calculate_points(word, True)
+        points = board.calculate_points(word)
         self.assertEqual(points, exp_score, f"Failed for word: '{expected}'")
 
         expected, (word, exp_score) = list(word_list.items())[1]
-        points = board.calculate_points(word, True)
+        points = board.calculate_points(word)
         self.assertEqual(points, exp_score, f"Failed for word: '{expected}'")
 
     @measure_time
