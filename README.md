@@ -39,12 +39,12 @@ python3 -m app
 
 * Click ```Advanced``` option, and Click into ```Proceed to 127.0.0.1 (unsafe)```.
 
-## Screen Shoots
+## Screenshots
 
 <p style="text-align:center;">
-<img src="screenshoots/ss_01.png" width="265" height="300" alt="Home Page" />
+<img src="screenshots/ss_01.png" alt="Home Page" />
 </p>
 
 <p style="text-align:center;">
-<img src="screenshoots/ss_03.png" width="265" height="300" alt="Board" />
+<img src="screenshots/ss_03.png" alt="Board" />
 </p>
