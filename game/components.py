@@ -418,10 +418,13 @@ class BoardContainer(np.ndarray):
         @param col: Column index
         @return: True if the cell is empty, False otherwise
         """
-        if (self[row, col] is None):
-            return True
-        return False
-
+        try:
+            if (self[row, col] is None):
+                return True
+            return False
+        except IndexError:
+            return False
+        
     def has_locked_tile(self ,row: int, col: int) -> bool:
         """
         @brief Check if the cell has a locked tile

@@ -47,6 +47,8 @@ class Player(Observer):
         self._skip_count: int = 0
         self._play_order: int = 100  # Set something large
         
+        self._player_strategy = PlayerStrategy.UNDEFINED
+
         # Create game components
         self._rack = Rack()
 
@@ -168,6 +170,13 @@ class Player(Observer):
         @return The privileges of the player.
         """
         return self._player_privileges
+
+    def get_player_strategy(self) -> PlayerStrategy:
+        return self._player_strategy
+
+    def set_player_strategy(self, player_strategy: PlayerStrategy) -> None:
+        print(f'Player ({self._player_id}) Strategy:  {PlayerStrategy.to_string(self._player_strategy)} -> {PlayerStrategy.to_string(player_strategy)}')
+        self._player_strategy = player_strategy
 
     def get_points(self) -> int:
         """

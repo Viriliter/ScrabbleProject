@@ -34,6 +34,19 @@ class PlayerState:
         }
         return state_map.get(state, "UNKNOWN_STATE")  # Handle unexpected values
 
+class PlayerStrategy:
+    UNDEFINED   = 0   # Undefined policy
+    GREEDY      = 1   # The greedy policy
+    BALANCED    = 2   # The balanced game strategy
+
+    @staticmethod
+    def to_string(state: int) -> str:
+        state_map = {
+            PlayerStrategy.UNDEFINED: "UNDEFINED",
+            PlayerStrategy.GREEDY: "GREEDY",
+            PlayerStrategy.BALANCED: "BALANCED",
+        }
+        return state_map.get(state, "UNKNOWN_STATE")  # Handle unexpected values
 class GameState:
     UNDEFINED               = 0  # Initial state
     WAITING_FOR_PLAYERS     = 1  # Waiting for players to join the game

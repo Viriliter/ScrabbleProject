@@ -146,6 +146,13 @@ class Scrabble(Subject):
     def get_players_meta(self) -> List[PlayerMeta]:
         return [player.get_player_meta() for player in self.__players]
 
+    def get_player_id(self, player_name: str) -> str:
+        for player in self.__players:
+            if player.get_player_name() == player_name:
+                return player.get_player_id()
+        return None
+
+
     def found_player(self, player_id: str) -> Player:
         for player in self.__players:
             if player.get_player_id() == player_id:

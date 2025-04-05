@@ -17,6 +17,8 @@ class ComputerPlayer(Player):
         self._player_privileges: PlayerPrivileges = PlayerPrivileges.PLAYER
         self.gamma = 0.8  # Discount factor
 
+        self._player_strategy = PlayerStrategy.BALANCED  # Computer players starts with balanced policy
+
         self.set_player_state(PlayerState.LOBBY_READY)  # Computer players gets ready automatically
         self.__observed_tiles = defaultdict(int)  # Observed tiles on game
         self.tiles_in_bag = 0  # Number of tiles in the bag
@@ -144,13 +146,22 @@ class ComputerPlayer(Player):
         """
         possible_moves = self.get_possible_moves()
         
-        if not possible_moves:
+        if not possible_moves or len(possible_moves)==0:
             return None
-        
-        # Evaluate each move based on immediate reward and future considerations
-        best_move = max(possible_moves, key=lambda move: self.evaluate_move(move))
-        
-        return best_move
+
+        if self._player_strategy == PlayerStrategy.GREEDY:                       
+            return possible_moves[0]  # First move is highest scored move
+        else:
+            # Evaluate each move based on immediate reward and future considerations
+            scored_moves = [(move, self.evaluate_move(move)) for move in possible_moves]
+            scored_moves.sort(key=lambda x: x[1], reverse=True)
+
+            print(f"\n--- Possible Moves--- ({self._player_name}) ")
+            for move, score in scored_moves:
+                print(f"Word: {''.join([tile.letter for tile in move.word])} | Original score: {move.score} | Estimated Score: {score:.2f}")
+
+            # Return highest scored move
+            return scored_moves[0][0]
     
     def evaluate_move(self, move: MOVE) -> int:
         """

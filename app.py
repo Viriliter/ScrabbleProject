@@ -13,6 +13,7 @@ from flask_socketio import SocketIO, emit
 from werkzeug.exceptions import abort
 
 from game import PlayerMeta, PlayerType, PlayerState, GameState, Scrabble, verbalize
+from game.enums import PlayerStrategy
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "admin"
@@ -481,6 +482,36 @@ def quit_game(game_id: str, player_id: str) -> Response:
             return jsonify({"status": "error", "message": "Player not found"}), 404
     else:
         return jsonify({"status": "error", "message": "Game not found"}), 404
+
+@app.route("/game/<game_id>/<player_id>/set-player-strategy", methods=["POST"])
+def set_player_strategy(game_id: str, player_id: str) -> Response:
+    if not player_id == "referee":
+        return jsonify({"status": "error", "message": "Player strategy can be only changed by referee."}), 400 
+
+    request_json = request.get_json()
+
+    if request_json is None:
+        return jsonify({"status": "error", "message": "Invalid request"}), 400
+
+    player_name = request_json.get("playerName")
+    strategy = request_json.get("strategy")
+    
+    game = get_game(game_id)
+    if game is None:
+        return jsonify({"status": "error", "message": "Game could not found"}), 404
+
+    target_player_id = game.get_player_id(player_name)
+
+    player = game.found_player(target_player_id)
+    if player is None:
+        return jsonify({"status": "error", "message": "Player could not be found"}), 404
+
+    if (strategy=="GREEDY"):
+        player.set_player_strategy(PlayerStrategy.GREEDY)
+    else:
+        player.set_player_strategy(PlayerStrategy.BALANCED)
+    
+    return jsonify({"status": "success", "playerName": player_name, "strategy": strategy}), 200
 
 # Other POSTS
 
