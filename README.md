@@ -42,9 +42,9 @@ python3 -m app
 ## Screen Shoots
 
 <p style="text-align:center;">
-<img src="screenshoots/ss01.png" width="265" height="300" alt="Home Page" />
+<img src="screenshoots/ss_01.png" width="265" height="300" alt="Home Page" />
 </p>
 
 <p style="text-align:center;">
-<img src="screenshoots/ss03.png" width="265" height="300" alt="Board" />
+<img src="screenshoots/ss_03.png" width="265" height="300" alt="Board" />
 </p>
