@@ -1234,7 +1234,7 @@ class Board:
                                 next((tile for tile in shrunk_rack if tile.is_blank), None))
 
                 word_so_far.append(TILE(erow, ecol, letter, rack_tile.point, rack_tile.is_blank))
-                shrunk_rack = [t for t in shrunk_rack if t != rack_tile]
+                shrunk_rack = [t for t in shrunk_rack if not t.is_similar(rack_tile)]
             else:
                 word_so_far.append(self.at(erow, ecol))
             
