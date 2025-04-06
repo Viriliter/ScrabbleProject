@@ -128,6 +128,9 @@ class TILE:
         self._is_locked = is_locked
         self._point = ALPH_ENGLISH[letter][1] if point == -1 else point
 
+        if (letter==BLANK_LETTER):
+            print(f"Tile - row: {row} col:{col} letter: {letter} is_blank: {is_blank}")
+
     @property
     def row(self) -> int:
         return self._row
@@ -201,7 +204,7 @@ class TILE:
         @param file: File to write the word
         """
         temp_word: WORD = copy.deepcopy(word)
-        if (temp_word.__len__()==0): return
+        if len(temp_word) == 0: return
         
         # Check the direction based on row and column values of the tiles
         rows = [tile.row for tile in temp_word]
@@ -231,6 +234,28 @@ class TILE:
             result += str(tile.letter)
 
         print(result, file=file)
+
+    @staticmethod
+    def stringify_word(word: 'WORD', file=None) -> str:
+        def col_to_letter(col_idx):
+            result = ''
+            while col_idx >= 0:
+                result = chr(col_idx % 26 + ord('A')) + result
+                col_idx = col_idx // 26 - 1
+            return result
+
+        parts = []
+        for tile in word:
+            col_letter = col_to_letter(tile.col)
+            row_number = tile.row + 1  # Adjust for 1-based row display
+            parts.append(f"({tile.letter}, {col_letter}{row_number})")
+
+        result_str = ', '.join(parts)
+        
+        if file:
+            print(result_str, file=file)
+        
+        return result_str
 
     def __iter__(self):
         for key in self.__dict__:

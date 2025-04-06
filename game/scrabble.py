@@ -17,6 +17,7 @@ from .enums import *
 class GameMeta:
     GAME_ID: str
     GAME_STATE: GameState
+    TILES_IN_BAG: int
 
 class Scrabble(Subject):
     default_lang = LANG_KEYS.ENG
@@ -141,7 +142,7 @@ class Scrabble(Subject):
         return [player.get_player_name() for player in self.__players]
 
     def get_game_meta(self) -> GameMeta:
-        return GameMeta(self.__game_id, self.__game_state)
+        return GameMeta(self.__game_id, self.__game_state, self.__tile_bag.get_remaining_tiles())
 
     def get_players_meta(self) -> List[PlayerMeta]:
         return [player.get_player_meta() for player in self.__players]
@@ -151,7 +152,6 @@ class Scrabble(Subject):
             if player.get_player_name() == player_name:
                 return player.get_player_id()
         return None
-
 
     def found_player(self, player_id: str) -> Player:
         for player in self.__players:
@@ -171,7 +171,7 @@ class Scrabble(Subject):
         return -1  # No player order found with provided id       
 
     def get_first_player(self) -> Player:
-        return None if self.__players.__len__() == 0 else self.__players[0]
+        return None if len(self.__players) == 0 else self.__players[0]
 
     def get_board(self) -> Board:
         return self.__board
@@ -183,7 +183,7 @@ class Scrabble(Subject):
         self.__turn_count = -1
 
     def is_all_players_ready(self) -> bool:
-        if self.__players.__len__() == 0: return False
+        if len(self.__players) == 0: return False
 
         for player in self.__players:
             if not player.get_player_state() == PlayerState.LOBBY_READY:
@@ -281,11 +281,11 @@ class Scrabble(Subject):
             player.add_points(points)
 
             # Place the word on the board
-            self.__board.place_word(word)
+            placed_tiles = self.__board.place_word(word)
 
             # Remove the tiles from the player's rack
-            letter_count = word.__len__()
-            for tile in word:
+            letter_count = len(placed_tiles)
+            for tile in placed_tiles:
                 player.remove_from_rack(tile)
 
             # Refill the rack of the player
@@ -362,7 +362,7 @@ class Scrabble(Subject):
         @return: The player who will play next
         """
         self.__currentPlayer.set_player_state(PlayerState.WAITING)
-        self.__turn_count = (self.__turn_count + 1) % self.__players.__len__()
+        self.__turn_count = (self.__turn_count + 1) % len(self.__players)
         self.__currentPlayer = self.__players[self.__turn_count]
         self.__currentPlayer.set_player_state(PlayerState.PLAYING)
         return self.__currentPlayer
@@ -402,13 +402,12 @@ class Scrabble(Subject):
             self.__set_game_state(GameState.PLAYER_ORDER_SELECTION)
 
     def __on_player_order_selection(self):
-        if self.__players.__len__() == 0: return
+        if len(self.__players) == 0: return
 
         # Check if all players have selected their order
         for player in self.__players:
             if (player.get_player_state() < PlayerState.WAITING):
                 return
-        print('Game has been started!!!!!!!!!!!!!')
         self.__set_game_state(GameState.GAME_STARTED)
 
     def __on_game_started(self):

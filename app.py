@@ -14,6 +14,7 @@ from werkzeug.exceptions import abort
 
 from game import PlayerMeta, PlayerType, PlayerState, GameState, Scrabble, verbalize
 from game.enums import PlayerStrategy
+from game.globals import TILE
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "admin"
@@ -456,7 +457,7 @@ def request_hint(game_id: str, player_id: str) -> Response:
         hints = game.get_hint(player_id, letters)
         if len(hints)>0:
             best_hint = hints[0]
-            return jsonify({"status": "success", "hint": str(best_hint.serialize())}), 200
+            return jsonify({"status": "success", "hint": str(TILE.stringify_word(best_hint.word) + f" Points: {best_hint.score}" )}), 200
         else:
             return jsonify({"status": "error", "message": "No hint found"}), 200
     else:

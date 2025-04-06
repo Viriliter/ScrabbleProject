@@ -151,7 +151,10 @@ class Rack:
             print(f"{t.letter}({t.is_blank})==={tile.letter}({tile.is_blank})  is_similar:{t.is_similar(tile)}")
             if t.is_similar(tile):
                 del self.__container[i]
-                break
+                print(f"Tile removed from rack: row:{tile.row} col:{tile.col} letter:{tile.letter} is_blank:{tile.is_blank}")
+                return
+
+        print(f"Tile could not be removed from rack: row:{tile.row} col:{tile.col} letter:{tile.letter} is_blank:{tile.is_blank}")
 
     def get_rack_length(self) -> int:
         """
@@ -556,7 +559,7 @@ class Board:
             return False
         return True
 
-    def place_tile(self, tile: TILE) -> bool:
+    def place_tile(self, tile: TILE) -> TILE:
         """
         @brief Place a tile on the board.
         @param tile: TILE object to be placed
@@ -568,24 +571,25 @@ class Board:
             tile.point = 0 if tile.is_blank else tile.point
             tile.is_locked = True
             self.__cells.set(tile.row, tile.col, tile)
-            return True
+            return tile
         else:
             # Cannot be placed since it is already occupied cell
-            return False
+            return None
 
-    def place_word(self, word: WORD) -> bool:
+    def place_word(self, word: WORD) -> TILE:
         """
         @brief Place a word on the board.
         @param word: List of TILE objects representing the word
-        @return: True if the word was successfully placed, False otherwise
+        @return: List of placed TILE objects on the board
         """
         if word is None or len(word) == 0:
             return False
         
-        is_placed = True
+        placed_tiles: List[TILE] = []
         for tile in word:
-            is_placed &= self.place_tile(tile)
-        return is_placed
+            placed_tile = self.place_tile(tile)
+            if placed_tile is not None: placed_tiles.append(placed_tile)
+        return placed_tiles
 
     def serialize_word(self, word: WORD) -> str:
         """

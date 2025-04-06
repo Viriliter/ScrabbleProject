@@ -39,8 +39,8 @@
         #returnLobbyButton:hover {
             background-color: #f25433; /* Light blue background */
         }
-        .points-box {
-            width: inherit;
+        .top-info-box {
+            width: auto;
             height: 40px;
             padding: 10px 20px;
             align-content: center;
@@ -169,11 +169,15 @@
 <body>
     <div class="container" style="display: grid; grid-template-columns: repeat(2, auto); grid-template-rows: repeat(1, auto); align-items: start;">
         <div class="container">
-            <div class="top-container">
-                <div class="points-box" id="pointBox">
-                    <span id="myGameStatus"></span>
+            <div class="top-container" style="justify-content: space-around">
+                <div style="display: flex; column-gap: 10px;">
+                    <div class="top-info-box" style="width: inherited;" id="gameStatusBox">
+                        <span id="myGameStatus"></span>
+                    </div>
+                    <div class="top-info-box" id="remainingInfoBox">
+                        <p style="display: contents">Remaining Tiles: <span id="remainingTiles">-</span></p>
+                    </div>
                 </div>
-                <div></div>
             </div>
         
             <div class="container" style="position: relative;">
@@ -392,6 +396,10 @@ socket.on('update-game', function(data) {
     myGame.setGameState(data.gameMeta.GAME_STATE);
 
     const myGameStatus = document.getElementById('myGameStatus');
+    const remainingTiles = document.getElementById('remainingTiles');
+
+    // Update remaining tiles in the bag
+    remainingTiles.textContent = `${data.gameMeta.TILES_IN_BAG}`;
 
     switch (myGame.getGameState()) {
         case (GameState.WAITING_FOR_PLAYERS):

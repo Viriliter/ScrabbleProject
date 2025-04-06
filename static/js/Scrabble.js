@@ -672,7 +672,7 @@ function submitWord(tiles=[]) {
         if (data.status === 'success') {
             // Update the points box with the calculated points
             if (data.points>0) {
-                document.getElementById('myPlayerPoints').textContent = data.points;
+                document.getElementById('remainingTiles').textContent = data.points;
                 updateTentativePoints(0);  // This will clear tentative points
                 clearSelectedTile();
             } else {
@@ -779,8 +779,6 @@ function updateLeaderboard(playersMeta_) {
         if (myPlayer !== null && myPlayer.getPlayerID() === player_.PLAYER_ID) {
             playerName.style.fontWeight = 'bold';
             playerContainer.style.border = '2px solid white'
-            const myPlayerPoints = document.getElementById('myPlayerPoints');
-            myPlayerPoints.textContent = `${player_.PLAYER_POINTS}`;
         }
 
         fragment.appendChild(playerContainer);
@@ -834,10 +832,6 @@ function updateMyPlayer(playersMeta_) {
             if (myPlayer.getPlayerState() == PlayerState.WAITING_ORDER) {
                 requestOrderButton.classList.remove('blocked');
             }
-
-            // Set points box
-            const myPlayerPoints = document.getElementById('myPlayerPoints');
-            myPlayerPoints.textContent = `${myPlayer.getPoints()}`;
         }
     });
 }
@@ -850,6 +844,11 @@ function updateGame(gameMeta) {
     const playerOrderDiv = document.getElementById('playerOrderDiv');
     const rackDiv = document.getElementById('rackDiv');
     const orderTileDiv = document.getElementById('orderTileDiv');
+    const remainingTiles = document.getElementById('remainingTiles');
+
+    // Update remaining tiles in the bag
+    remainingTiles.textContent = `${gameMeta.TILES_IN_BAG}`;
+
     
     switch (myGame.getGameState()) {
         case (GameState.WAITING_FOR_PLAYERS):
