@@ -24,9 +24,12 @@ class ComputerPlayer(Player):
         self.tiles_in_bag = 0  # Number of tiles in the bag
 
     def _listen(self, message: any) -> None:
+        print(f"message: {message}")
+        print(f"Player notification received lock? (Player: {self._player_name} ({self._player_id}) GameState: {GameState.to_string(message)})")
         self.lock()  # Prevents recursive calls
+        print(f"Player notification received (Player: {self._player_name} ({self._player_id}) GameState: {GameState.to_string(message)})")
         if message == GameState.WAITING_FOR_PLAYERS:
-            if (self.get_player_state() == PlayerState.LOBBY_READY):
+            if self.get_player_state() == PlayerState.LOBBY_READY or self.get_player_state() == PlayerState.LOBBY_WAITING:
                 self.emit("enter_player_to_game", self._player_id)
         elif message == GameState.PLAYER_ORDER_SELECTION:
             if (self.get_player_state() == PlayerState.WAITING_ORDER):

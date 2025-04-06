@@ -9,10 +9,16 @@ const PlayerState = {
     LOST:           7,   // Player has lost the game
 };
 
+const PlayerType = {
+    UNDEFINED:  0,   // The player type is not been initialized yet
+    COMPUTER:   1,   // Computer player type
+    HUMAN:      2,   // Human player type
+};
+
 class Player {
     playerID = -1;
     playerName = '';
-    playerType = 0;
+    playerType = PlayerType.UNDEFINED;
     isAdmin = false;
     playerState = PlayerState.UNDEFINED;
     orderLetter = null;

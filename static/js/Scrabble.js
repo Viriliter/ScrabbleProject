@@ -832,6 +832,18 @@ function updateMyPlayer(playersMeta_) {
             if (myPlayer.getPlayerState() == PlayerState.WAITING_ORDER) {
                 requestOrderButton.classList.remove('blocked');
             }
+            
+            // Block all user actions
+            if (player_.PLAYER_TYPE == PlayerType.COMPUTER) {
+                returnLobbyButton.classList.add('blocked');
+                requestOrderButton.classList.add('blocked');
+                exchangeButton.classList.add('blocked');
+                revertButton.classList.add('blocked');
+                hintButton.classList.add('blocked');
+                shuffleButton.classList.add('blocked');
+                skipTurnButton.classList.add('blocked');
+                submitButton.classList.add('blocked');
+            }
         }
     });
 }

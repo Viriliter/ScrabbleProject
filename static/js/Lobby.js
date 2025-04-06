@@ -84,7 +84,7 @@ function updateLobby(playersMeta_) {
 
 function collectPlayerTypes() {
         const playerTypes = [];
-        const playerTypeIds = ['dummyPlayerType1', 'dropdownPlayerType2', 'dropdownPlayerType3', 'dropdownPlayerType4'];
+        const playerTypeIds = ['dropdownPlayerType1', 'dropdownPlayerType2', 'dropdownPlayerType3', 'dropdownPlayerType4'];
 
         playerTypeIds.forEach(id => {
             const playerTypeElement = document.getElementById(id);
@@ -101,13 +101,13 @@ function createNewGame() {
     const playerTypes = collectPlayerTypes();
     const playerName = document.getElementById('inputPlayerName').value;
 
-    if (playerName == '') {
-        alert('Enter a Username');
+    if (playerTypes.length <= 1) {
+        alert('Minimum number of player should be 2!');
         return;
     }
 
-    if (playerTypes.length <= 1) {
-        alert('Minimum number of player should be 2!');
+    if (playerTypes[0] === 'HUMAN' && playerName === '') {
+        alert('Enter a Username');
         return;
     }
 
@@ -130,7 +130,8 @@ function createNewGame() {
 
             myGame = new Game(data.gameID);
             myPlayer = new Player(data.playerID, '');
-            myPlayer.setAdmin();
+            myPlayer.setPlayerType(playerTypes[0]=='HUMAN'? PlayerType.HUMAN: PlayerType.COMPUTER)
+            if (data.isAdmin) myPlayer.setAdmin();
 
             document.getElementById('gameIDSpan').textContent = myGame.getGameID();
             document.getElementById('gameIDHeader').style.visibility = 'visible';
@@ -138,10 +139,14 @@ function createNewGame() {
             playersMeta = data.playersMeta;
             updateLobby(playersMeta)
 
-            myPlayer.setPlayerName(playerName);
-            setPlayerName(myGame.getGameID(), myPlayer.getPlayerID(), myPlayer.getPlayerName());
-
-            navigateToLobbyStack();
+            if (myPlayer.getPlayerType() == PlayerType.HUMAN) {
+                myPlayer.setPlayerName(playerName);
+                setPlayerName(myGame.getGameID(), myPlayer.getPlayerID(), myPlayer.getPlayerName());   
+                navigateToLobbyStack();
+            } else if (myPlayer.getPlayerType() == PlayerType.COMPUTER) {
+                enterGame();
+            }
+            
             return true;
         } else {
             alert('Unknown error: ' + data.message);

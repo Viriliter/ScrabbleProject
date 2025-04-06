@@ -68,10 +68,18 @@
                     <div class="table-lobby" id="tablePlayerList">
                         <div class="container-lobby">
                             <span style="margin: 10px;">Player 1</span>
-                            <div class="form-group">
+                            <div class="dropdown">
+                                <button class="btn btn-secondary btn-sm dropdown-toggle fixed-width-dropdown" type="button" id="dropdownPlayerType1" data-bs-toggle="dropdown"  aria-haspopup="true" aria-expanded="false">
+                                    HUMAN
+                                </button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownPlayerType1">
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType1', 'COMPUTER')">COMPUTER</a>
+                                    <a class="dropdown-item" onclick="updateDropdownText('dropdownPlayerType1', 'HUMAN')">HUMAN</a>
+                                </div>
+                            </div>
+                            <div class="form-group" style="width: 200px;">
                                 <input type="text" class="form-control" id="inputPlayerName" placeholder="Enter Username"  style="text-align: center;">
                             </div>
-                            <span id="dummyPlayerType1" style="visibility: hidden;">HUMAN</span>
                         </div>
                         <div class="container-lobby">
                             <span style="margin: 10px;">Player 2</span>
@@ -143,6 +151,14 @@
 
 function updateDropdownText(dropdownId, text) {
     document.getElementById(dropdownId).innerText = text;
+
+    if (dropdownId === 'dropdownPlayerType1') {
+        if (text == 'COMPUTER') {
+            document.getElementById('inputPlayerName').style.display = 'none'  // Hide player name field
+        } else {
+            document.getElementById('inputPlayerName').style.display = ''
+        }
+    }
 }
 
 </script>

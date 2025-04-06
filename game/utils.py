@@ -25,7 +25,7 @@ def serialize_dict(d: Dict[Any, Any]) -> Dict[str, Any]:
         r[str(key)] = value
     return r
 
-def verbalize(tiles: List[Tuple[LETTER, str, str]]) -> WORD:
+def verbalize(tiles: List[Tuple[LETTER, str, str, bool]]) -> WORD:
     """
     @brief Convert a list of tiles into a WORD object.
     @param tiles: A list of tuples containing the letter, row, and column.
@@ -35,6 +35,7 @@ def verbalize(tiles: List[Tuple[LETTER, str, str]]) -> WORD:
     for tile in tiles:
         letter = tile["letter"]
         location = tile["location"]
+        is_blank = tile["isJoker"]
 
         match = re.match(r"([A-Z]+)(\d+)", location)
         if not match:
@@ -44,7 +45,7 @@ def verbalize(tiles: List[Tuple[LETTER, str, str]]) -> WORD:
         c = sum((ord(char) - ord('A')) * (26 ** i) for i, char in enumerate(reversed(col_str)))  # Convert 'A' -> 1, 'B' -> 2, ..., 'AA' -> 27
         r = int(row_str) - 1
         
-        letter = TILE(r, c, letter)
+        letter = TILE(row=r, col=c, letter=letter, is_blank=is_blank)
         word.append(letter)
         
     return word

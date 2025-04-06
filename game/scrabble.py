@@ -94,13 +94,13 @@ class Scrabble(Subject):
         else:
             return None
 
-        if not (player_type == PlayerPrivileges.REFEREE):
-            self.__players.append(player)
-            self.__active_player_count += 1
+        self.__players.append(player)
+        self.__active_player_count += 1
 
         self.attach(player)  # Attach the player to the observer list
         print(f"A new player with id of {player.get_player_id()} created.")
 
+        self.__update()
         return player.get_player_id()
 
     def kick_player(self, player_id: str) -> bool:
@@ -153,6 +153,12 @@ class Scrabble(Subject):
                 return player.get_player_id()
         return None
 
+    def get_player_ids(self) -> List[str]:
+        player_ids = []
+        for player in self.__players:
+            player_ids.append(player.get_player_id())
+        return player_ids
+
     def found_player(self, player_id: str) -> Player:
         for player in self.__players:
             if player.get_player_id() == player_id:
@@ -190,15 +196,22 @@ class Scrabble(Subject):
                 return False
         return True
 
-    def is_game_has_admin(self) -> bool:
+    def get_admin_id(self) -> Optional[str]:
         for player in self.__players:
             if player.is_admin():
-                return True
-        return False
+                return player.get_player_id()
+        return None
 
     def is_game_started(self) -> bool:
         return self.get_game_state() == GameState.GAME_STARTED
     
+    def is_player_entered(self, player_id: str) -> bool:
+        for player in self.__players:
+            if player.get_player_id() == player_id:
+                if player.get_player_state() >= GameState.PLAYER_ORDER_SELECTION:
+                    return True
+        return False
+
     # Player Actions
     def enter_player_to_game(self, player_id: str) -> bool:
         print(f"Player {player_id} is about to enter the game.")
@@ -236,6 +249,8 @@ class Scrabble(Subject):
             print(f"Player {player_id} cannot pick letter")
             return None
 
+        print(f"Player {player_id} picked letter {letter} for order")
+
         order = ord(letter) - ord('A') + 1
         player.set_play_order(order)
 
@@ -245,8 +260,6 @@ class Scrabble(Subject):
         
         self.__update()
 
-        print(f"Player {player_id} picked letter {letter} for order")
- 
         return letter
 
     def verify_word(self, word: WORD) -> int:
@@ -361,6 +374,7 @@ class Scrabble(Subject):
         @param word: The player id
         @return: The player who will play next
         """
+        print(f"Next turn called: {self.__turn_count} {self.__currentPlayer.get_player_name()}")
         self.__currentPlayer.set_player_state(PlayerState.WAITING)
         self.__turn_count = (self.__turn_count + 1) % len(self.__players)
         self.__currentPlayer = self.__players[self.__turn_count]
@@ -417,33 +431,35 @@ class Scrabble(Subject):
         else:
             # At the very beginning of the game
             if (self.__currentPlayer == None):
+                print(f"Very beginnig of the game")
                 for player in self.__players:
                     if player.is_rack_empty():
                         player.initialize_rack(self.__tile_bag)
                 
-                self.reset_turn_count()
+                self.__turn_count = 0
                 self.__currentPlayer = self.get_first_player()
                 self.__currentPlayer.set_player_state(PlayerState.PLAYING)
                 #if (self.__currentPlayer.get_player_type() == PlayerType.COMPUTER):
                 #    score, tiles = self.__currentPlayer.play_turn()
                 #    self.submit(self.__currentPlayer.get_player_name(), tiles)
-            
-            iter = 0
-            while self.__currentPlayer.get_player_state != PlayerState.PLAYING and iter < self.__player_count:
-                self.__currentPlayer.set_player_state(PlayerState.WAITING)
-                self.next_turn()  # Move to next player
-                iter += 1
 
-            self.__currentPlayer.set_player_state(PlayerState.PLAYING)
-            if (self.__currentPlayer.get_player_type() == PlayerType.COMPUTER):
-                pass
-                #score, tiles = self.__currentPlayer.play_turn()
-                #self.submit(self.__currentPlayer.get_player_name(), tiles)
+            #iter = 0
+            #while self.__currentPlayer.get_player_state() != PlayerState.PLAYING and iter < self.__player_count:
+            #    #self.__currentPlayer.set_player_state(PlayerState.WAITING)
+            #    self.next_turn()  # Move to next player
+            #    iter += 1
+#
+            #self.__currentPlayer.set_player_state(PlayerState.PLAYING)
+            #if (self.__currentPlayer.get_player_type() == PlayerType.COMPUTER):
+            #    pass
+            #    #score, tiles = self.__currentPlayer.play_turn()
+            #    #self.submit(self.__currentPlayer.get_player_name(), tiles)
         
     def __on_game_over(self):
         pass
     
     def __update(self) -> None:
+        print(f"__update called", {GameState.to_string(self.__game_state)})
         if self.__game_state == GameState.WAITING_FOR_PLAYERS:
             self.__on_waiting_for_players()
         elif self.__game_state == GameState.PLAYER_ORDER_SELECTION:
@@ -456,6 +472,7 @@ class Scrabble(Subject):
             raise ValueError("Invalid game state")
 
         self.update_clients()
+        print(f"Notifying allll {GameState.to_string(self.__game_state)}")
         self.notify_all(self.__game_state)  # Notify all players about the game state
 
     def __check_game_over(self) -> bool:

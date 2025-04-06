@@ -27,8 +27,8 @@
 }
 .stacked-container{
     display: flex;
-    width: 400px; /* Set a fixed width for equal size */
-    height: 400px; /* Set a fixed height for equal size */
+    width: 500px;
+    height: 400px;
     position: relative;
     flex-direction: column;
     justify-content: center;
@@ -99,6 +99,13 @@
     text-transform: uppercase;
     column-gap: 10px;
     border-radius: 10px;
+    vertical-align: middle;
+}
+.container-lobby span:first-child{
+    display: inline-block;
+    min-width: 80px;
+    text-align: right;
+    font-weight: bold;
 }
 .input-group {
     display: flex;

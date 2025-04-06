@@ -105,6 +105,9 @@ class TileBag:
             raise ValueError("No available letters left to pick.")
     
         letter = random.choice(list(available_letters))
+        if letter == BLANK_LETTER:
+            letter = self.pick_letter_for_order()
+
         self.__picked_letters.append(letter)
         return letter
 
@@ -140,18 +143,28 @@ class Rack:
         @brief Add a tile to the rack.
         @param tile: TILE object to be added
         """
-        self.__container.append(tile)
+        if len(self.__container) < RACK_CAPACITY:
+            self.__container.append(tile)
 
     def remove_tile(self, tile: TILE) -> None:
         """
         @brief Remove a tile from the rack.
         @param tile: TILE object to be removed
         """
+        print(self.get_rack())
+
         for i, t in enumerate(self.__container):
-            print(f"{t.letter}({t.is_blank})==={tile.letter}({tile.is_blank})  is_similar:{t.is_similar(tile)}")
+            #print(f"{t.letter}({t.is_blank})==={tile.letter}({tile.is_blank})  is_similar:{t.is_similar(tile)}")
             if t.is_similar(tile):
                 del self.__container[i]
                 print(f"Tile removed from rack: row:{tile.row} col:{tile.col} letter:{tile.letter} is_blank:{tile.is_blank}")
+                return
+
+        # Remove joker tile if provided tile does not match with the tiles in the rack
+        #TODO It is ugly but for now only solution to effectively remove joker tile.
+        for i, t in enumerate(self.__container):
+            if (t.letter == BLANK_LETTER):
+                del self.__container[i]
                 return
 
         print(f"Tile could not be removed from rack: row:{tile.row} col:{tile.col} letter:{tile.letter} is_blank:{tile.is_blank}")
@@ -987,11 +1000,11 @@ class Board:
 
         # If length of the word is 1, then we need to look its around to understand its direction
         if len(word) == 1:
-            # Look upwards
+            # Look downwards
             if not self.__cells.is_empty(word[0].row+1, word[0].col):
                 return Board.Direction.Vertical
 
-            # Look downwards
+            # Look upwards
             if not self.__cells.is_empty(word[0].row-1, word[0].col):
                 return Board.Direction.Vertical
 

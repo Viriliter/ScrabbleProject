@@ -78,14 +78,15 @@ class Player(Observer):
         else:
             return False
 
-    def set_player_state(self, player_state: PlayerState) -> None:
+    def set_player_state(self, player_state: PlayerState) -> bool:
         """
         @brief Set the state of the player.
         @param player_state: The new state of the player.
         """
-        if self._player_state == player_state: return
+        if self._player_state == player_state: return False
         print(f'Player ({self._player_id}) State:  {PlayerState.to_string(self._player_state)} -> {PlayerState.to_string(player_state)}')
         self._player_state = player_state
+        return True
 
     def get_player_state(self) -> PlayerState:
         """
@@ -224,13 +225,13 @@ class Player(Observer):
         @brief Enter the game and initialize the player's rack.
         @param tile_bag: The tile bag from which to draw tiles.
         """
-        self._player_state = PlayerState.LOBBY_READY
+        self.set_player_state(PlayerState.LOBBY_READY)
 
     def widthdraw(self) -> None:
         """
         @brief Withdraw the player from the game.
         """
-        self._player_state = PlayerState.LOST
+        self.set_player_state(PlayerState.LOST)
 
     def play_turn(self) -> Tuple[int, WORD]:
         """
@@ -262,7 +263,7 @@ class Player(Observer):
         @param tile_bag: The tile bag from which to draw tiles.
         """
         self._rack.clear()
-        for _ in range(INITIAL_TILE_COUNT):
+        for _ in range(RACK_CAPACITY):
             self._rack.add_tile(tile_bag.get_random_tile())
 
     def add_tile(self, tile: TILE) -> None:

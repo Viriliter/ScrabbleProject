@@ -37,17 +37,7 @@ def clean_games() -> None:
     threading.Timer(GAME_CLEAN_INTERVAL, clean_games).start()  # Run every 10 seconds
 
 def create_game(player_types: int) -> Scrabble:
-    game = Scrabble(socketio, len(player_types))
-    
-    # Create computer players 
-    for player_type in player_types:
-        if player_type == "COMPUTER":
-            player_id = game.create_player(PlayerType.COMPUTER)
-            if player_id is None:
-                return None
-        else:
-            continue
-
+    game = Scrabble(socketio, len(player_types))   
     games.append(game)
     return game
 
@@ -133,20 +123,34 @@ def create_new_game() -> Response:
 
     game_id = game.get_game_id()
 
-    # First player is always admin
-    player_id = game.create_player(player_types[0])
-    if player_id is None:
-        return jsonify({"status": "error", "message": "Cannot create the player"}), 400
-    
-    admin_player_id = -1
-    if not game.is_game_has_admin():
-        game.found_player(player_id).set_as_admin()
-        admin_player_id = player_id
+    for i, player_type in enumerate(player_types):
+        # First player type is human, create the player
+        if player_type=='HUMAN' and i==0:
+            player_id = game.create_player(PlayerType.HUMAN)
+            if player_id is None:
+                return jsonify({"status": "error", "message": "Cannot create the player"}), 400
+        # Create computer player 
+        elif player_type == "COMPUTER":
+            player_id = game.create_player(PlayerType.COMPUTER)
+            if player_id is None:
+                return None
+        else:
+            continue
+
+    admin_player_id = game.get_admin_id()
+    is_player_admin = False
+    if admin_player_id is None:
+        player_ids = game.get_player_ids()
+        if len(player_ids) == 0:
+            return jsonify({"status": "error", "message": "Cannot create the player"}), 400
+        game.found_player(player_ids[0]).set_as_admin()  # Make first player admin
+        admin_player_id = player_ids[0]
+        is_player_admin = True
 
     update_lobby(game)
 
     # Player that creates the game is always admin
-    return jsonify({"status": "success", "gameID": game_id, "playerID": admin_player_id, "isAdmin": True}), 200
+    return jsonify({"status": "success", "gameID": game_id, "playerID": admin_player_id, "isAdmin": is_player_admin}), 200
 
 @app.route("/join-game", methods=["POST"])
 def join_game() -> Response:
@@ -187,6 +191,7 @@ def set_player_name() -> Response:
     game_id = request_json.get("gameID")
     player_id = request_json.get("playerID")
     player_name = request_json.get("playerName")
+    print(f"APP >>> Player trying to set its name game (Game ID: {game_id}, Player ID: {player_id})")
 
     if not game_id or not player_id or not player_name:
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
@@ -199,7 +204,7 @@ def set_player_name() -> Response:
             return jsonify({"status": "error", "message": "Game already started. Cannot change player name"}), 400
 
         player = game.found_player(player_id)
-        if player is not None:  # If player is found
+        if player is not None and player.get_player_type() == PlayerType.HUMAN:  # If player is found and its type is HUMAN
             player.set_player_name(player_name)
     
             update_lobby(game)
@@ -226,7 +231,7 @@ def ready_user() -> Response:
             return jsonify({"status": "error", "message": "Game already started. Cannot set player to ready state"}), 400
 
         player = game.found_player(player_id)
-        if player is not None:
+        if player is not None and player.get_player_type() == PlayerType.HUMAN:
             player.set_player_state(PlayerState.LOBBY_READY)
             return jsonify({"status": "success"}), 200
         else:
@@ -251,7 +256,11 @@ def enter_game() -> Response:
         if game.is_game_started():
             return jsonify({"status": "error", "message": "Game already started"}), 400
 
-        is_entered = game.enter_player_to_game(player_id)
+        # If the player is not entered game, enter it
+        is_entered = game.is_player_entered(player_id)
+        if not is_entered: 
+            is_entered = game.enter_player_to_game(player_id)
+
         update_lobby(game)
 
         if is_entered:
@@ -396,7 +405,7 @@ def skip_turn(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
     if game is not None:
         player = game.found_player(player_id)
-        if player is not None:
+        if player is not None and player.get_player_type() == PlayerType.HUMAN:
             is_skipped = game.skip_turn(player_id)
             if is_skipped:
                 return jsonify({"status": "success"}), 200
@@ -423,7 +432,7 @@ def submit(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
     if game is not None:
         player = game.found_player(player_id)
-        if player is not None:
+        if player is not None and player.get_player_type() == PlayerType.HUMAN:
             word = verbalize(tiles)
             calculated_points = game.submit(player_id, word)
             if calculated_points > 0:
@@ -473,7 +482,7 @@ def quit_game(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
     if game is not None:
         player = game.found_player(player_id)
-        if player is not None:
+        if player is not None and player.get_player_type() == PlayerType.HUMAN:
             is_kicked = game.kick_player(player_id)
             if is_kicked:
                return redirect('/')

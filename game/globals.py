@@ -305,11 +305,11 @@ BOARD_ROW: int = 15
 BOARD_COL: int = 15
 
 # Declare initial tile count for each player
-INITIAL_TILE_COUNT: int = 7
+RACK_CAPACITY: int = 7
 
 MIN_PLAYER_COUNT: int = 2
 
-COMPUTER_PLAYER_NAMES = ["Socrates", "Plato", "Aristotle", "Marx"]
+COMPUTER_PLAYER_NAMES = ["Socrates", "Plato", "Aristotle", "Pythagoras"]
 
 # Letter: (Count, Points, LetterType, Frequency)
 ALPH_ENGLISH: ALPHABET = {
