@@ -363,6 +363,16 @@
             <div class="leader-board-table" id="tableLeaderboard"></div>
         </div>
     </div>
+    <dialog id="myGameOverDialog" style="padding: 0px;">
+        <div id="victoryPanel" style="visibility: collapse;">
+            <h1>Congratulations. You won 🎉</h1>
+            <button id="myGameOverDialogCloseBtn">Close</button>
+        </div>
+        <div class="leader-board" style="margin-top: 80px;">
+            <div class="leader-board-table" id="tableGameOverLeaderboard"></div>
+        </div>
+        <canvas id="confetti-canvas"></canvas>
+    </dialog>
 </body>
 
 <script>
@@ -481,6 +491,49 @@ socket.on('game-message', function(data) {
     showGameMessage(data);
 });
 
+socket.on('game-ended', function(data) {
+    console.log('game-ended::::');
+
+    playersMeta = data.playersMeta;
+    winnerId = data.winnerId;
+
+    updatePlayers(playersMeta)
+
+    dialog = document.getElementById('myGameOverDialog');
+    victoryPanel = document.getElementById('victoryPanel');
+    victoryPanel.style.visibility = 'visible'
+    
+    const canvas = document.getElementById('confetti-canvas');
+    const confettiInstance = confetti.create(canvas, { resize: true, useWorker: true });
+    
+    // Trigger confetti burst
+    confettiInstance({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+    });
+
+    // Repeating sparkles
+    let sparkleInterval = setInterval(() => {
+        confettiInstance({
+        particleCount: 20,
+        spread: 50,
+        origin: {
+            x: Math.random(),
+            y: Math.random() / 2
+        }
+        });
+    }, 500);
+
+    // Stop sparkles when dialog closes
+    dialog.addEventListener('close', () => {
+        clearInterval(sparkleInterval);
+        quitGame();  // Quit game on closing button
+    }, { once: true });
+
+    dialog.showModal();  // Opens the dialog as a modal
+});
+
 
 function getUrlParams() {
     const path = window.location.pathname;
@@ -578,7 +631,6 @@ balancedStrategyButton_3.addEventListener('click', () => {
     setPlayerStrategy(playerName, 'BALANCED');
 });
 
-
 function setPlayerStrategy(targetPlayerName, targetStrategy) {
     console.log('setting player strategy...');
     fetch(`${window.location}/set-player-strategy`, {
@@ -599,6 +651,15 @@ function setPlayerStrategy(targetPlayerName, targetStrategy) {
         console.error('Unknown Error:', error);
     });
 }
+
+// Game Over Dialog
+const myGameOverDialogCloseBtn = document.getElementById('myGameOverDialogCloseBtn');
+
+myGameOverDialogCloseBtn.addEventListener('click', () => {
+    const myGameOverDialog = document.getElementById('myGameOverDialog');
+    myGameOverDialog.close();
+    quitGame();
+});
 
 </script>
 

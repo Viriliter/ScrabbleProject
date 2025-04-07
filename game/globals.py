@@ -338,8 +338,7 @@ ALPH_ENGLISH: ALPHABET = {
     'W': (2 , 4 , LetterType.CONSONANT, 2.400),
     'X': (1 , 8 , LetterType.CONSONANT, 0.150),
     'Y': (2 , 4 , LetterType.CONSONANT, 2.000),
-    'Z': (1 , 10, LetterType.CONSONANT, 0.074),
-    ' ': (2 , 0 , LetterType.UNDEFINED, 0.000)
+    'Z': (1 , 10, LetterType.CONSONANT, 0.074)
 }
 
 ALPH_TURKISH: ALPHABET = {

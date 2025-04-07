@@ -333,14 +333,13 @@
             </div>
         </div>
     </dialog>
-
     <dialog id="myGameOverDialog" style="padding: 0px;">
         <div id="victoryPanel" style="visibility: collapse;">
             <h1>Congratulations. You won 🎉</h1>
             <button id="myGameOverDialogCloseBtn">Close</button>
         </div>
         <div class="leader-board" style="margin-top: 80px;">
-            <div class="leader-board-table" id="tableLeaderboard"></div>
+            <div class="leader-board-table" id="tableGameOverLeaderboard"></div>
         </div>
         <canvas id="confetti-canvas"></canvas>
     </dialog>
@@ -396,6 +395,10 @@ socket.on('game-message', function(data) {
     showGameMessage(data);
 });
 
+socket.on('game-ended', function(data) {
+    console.log('game-ended::::');
+    showGameOverDialog(data);
+});
 
 function getUrlParams() {
     const path = window.location.pathname;
@@ -528,36 +531,10 @@ const myBackToLobbyDialogConfirmCancel = document.getElementById('myBackToLobbyD
 
 // Game Over Dialog
 const myGameOverDialogCloseBtn = document.getElementById('myGameOverDialogCloseBtn');
-const canvas = document.getElementById('confetti-canvas');
-const confettiInstance = confetti.create(canvas, { resize: true, useWorker: true });
 
 returnLobbyButton.addEventListener('click', () => {
     const gameOverDialog = document.getElementById('GameOverDialog');
     gameOverDialog.showModal();
-
-    // Trigger confetti burst
-    confettiInstance({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-    });
-
-    // Optional: Repeating sparkles
-    let sparkleInterval = setInterval(() => {
-        confettiInstance({
-        particleCount: 20,
-        spread: 50,
-        origin: {
-            x: Math.random(),
-            y: Math.random() / 2
-        }
-        });
-    }, 500);
-
-    // Stop sparkles when dialog closes
-    gameOverDialog.addEventListener('close', () => {
-        clearInterval(sparkleInterval);
-    }, { once: true });
 });
 
 myGameOverDialogCloseBtn.addEventListener('click', () => {

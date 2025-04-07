@@ -429,6 +429,49 @@ function showExchangeLetterDialog() {
     dialog.showModal();  // Opens the dialog as a modal
 }
 
+function showGameOverDialog(data) {
+    playersMeta = data.playersMeta;
+    winnerId = data.winnerId;
+
+    updatePlayers(playersMeta)
+
+    dialog = document.getElementById('myGameOverDialog');
+    victoryPanel = document.getElementById('victoryPanel');
+    if (winnerId == myPlayer.getPlayerID()) {
+        victoryPanel.style.visibility = 'visible'
+        
+        const canvas = document.getElementById('confetti-canvas');
+        const confettiInstance = confetti.create(canvas, { resize: true, useWorker: true });
+        
+
+        // Trigger confetti burst
+        confettiInstance({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+
+        // Repeating sparkles
+        let sparkleInterval = setInterval(() => {
+            confettiInstance({
+            particleCount: 20,
+            spread: 50,
+            origin: {
+                x: Math.random(),
+                y: Math.random() / 2
+            }
+            });
+        }, 500);
+
+        // Stop sparkles when dialog closes
+        dialog.addEventListener('close', () => {
+            clearInterval(sparkleInterval);
+        }, { once: true });
+    }
+
+    dialog.showModal();  // Opens the dialog as a modal
+}
+
 function showHint() {
     if (myPlayer === null) return;
 
@@ -709,82 +752,106 @@ function updateLeaderboard(playersMeta_) {
         return;
     }
 
-    const tableLeaderboard = document.getElementById('tableLeaderboard');
-    tableLeaderboard.innerHTML = ''; // Clear contents
+    const leaderBoards = document.querySelectorAll('.leader-board-table');
+    leaderBoards.forEach(tableLeaderboard => {
+        tableLeaderboard.innerHTML = ''; // Clear contents
 
-    const fragment = document.createDocumentFragment();
+        const fragment = document.createDocumentFragment();
+    
+        playersMeta_.forEach((player_, index) => {
+            const playerContainer = document.createElement('div');
+            playerContainer.classList.add('player-item');
+    
+            if (player_.IS_ADMIN) {
+                const adminIndicator = document.createElement('span');
+                adminIndicator.style.margin = '10px';
+                adminIndicator.style.color = 'yellow';
+                adminIndicator.textContent = '★';
+                adminIndicator.title = 'Admin';
+                playerContainer.appendChild(adminIndicator);
+            } else {
+                const adminIndicator = document.createElement('span');
+                adminIndicator.style.margin = '10px';
+                adminIndicator.style.color = 'yellow';
+                adminIndicator.textContent = ' ';
+                adminIndicator.title = ' ';
+                playerContainer.appendChild(adminIndicator);
+            }
+    
+            const playerName = document.createElement('span');
+            playerName.style.margin = '10px';
+            playerName.textContent = player_.PLAYER_NAME;
+            playerContainer.appendChild(playerName);
+    
+            const playerPoint = document.createElement('span');
+            playerPoint.style.margin = '10px';
+            playerPoint.textContent = player_.PLAYER_POINTS;
+            playerContainer.appendChild(playerPoint);
+    
+            if (player_.PLAYER_STATE === PlayerState.WAITING) {
+                const stateIndicator = document.createElement('span');
+                addNullPlayingStatusIcon(stateIndicator);   
 
-    playersMeta_.forEach((player_, index) => {
-        const playerContainer = document.createElement('div');
-        playerContainer.classList.add('player-item');
-
-        if (player_.IS_ADMIN) {
-            const adminIndicator = document.createElement('span');
-            adminIndicator.style.margin = '10px';
-            adminIndicator.style.color = 'yellow';
-            adminIndicator.textContent = '★';
-            adminIndicator.title = 'Admin';
-            playerContainer.appendChild(adminIndicator);
-        } else {
-            const adminIndicator = document.createElement('span');
-            adminIndicator.style.margin = '10px';
-            adminIndicator.style.color = 'yellow';
-            adminIndicator.textContent = ' ';
-            adminIndicator.title = ' ';
-            playerContainer.appendChild(adminIndicator);
-        }
-
-        const playerName = document.createElement('span');
-        playerName.style.margin = '10px';
-        playerName.textContent = player_.PLAYER_NAME;
-        playerContainer.appendChild(playerName);
-
-        const playerPoint = document.createElement('span');
-        playerPoint.style.margin = '10px';
-        playerPoint.textContent = player_.PLAYER_POINTS;
-        playerContainer.appendChild(playerPoint);
-
-        if (player_.PLAYER_STATE === PlayerState.WAITING) {
-            const stateIndicator = document.createElement('span');
-
-            stateIndicator.style.margin = '10px';
-            stateIndicator.style.background = 'transparent';
-            stateIndicator.style.color = 'var(--text-color)';
-
-            playerContainer.appendChild(stateIndicator);
-        } else if (player_.PLAYER_STATE === PlayerState.PLAYING) {
-            const stateIndicator = document.createElement('span');
-            stateIndicator.innerHTML = " \
-                <svg class=\"w-6 h-6 text-gray-800 dark:text-white\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" fill=\"none\" viewBox=\"0 0 24 24\"> \
-                    <path stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z\"/> \
-                </svg> \
-            "
-
-            stateIndicator.style.margin = '10px';
-            stateIndicator.style.background = 'transparent';
-            stateIndicator.style.color = 'var(--text-color)';
-            stateIndicator.title = 'Waiting player to finish the move';
-
-            playerContainer.appendChild(stateIndicator);
-        } else if (player_.PLAYER_STATE === PlayerState.WIN) {
-
-            
-        } else if (player_.PLAYER_STATE === PlayerState.LOST) {
-            playerName.style.textDecoration = 'line-through';
-            playerName.setAttribute('title', 'LOST');
-        } else {
-
-        }
-
-        if (myPlayer !== null && myPlayer.getPlayerID() === player_.PLAYER_ID) {
-            playerName.style.fontWeight = 'bold';
-            playerContainer.style.border = '2px solid white'
-        }
-
-        fragment.appendChild(playerContainer);
+                stateIndicator.style.margin = '10px';
+                stateIndicator.style.background = 'transparent';
+                stateIndicator.style.color = 'var(--text-color)';
+    
+                playerContainer.appendChild(stateIndicator);
+            } else if (player_.PLAYER_STATE === PlayerState.PLAYING) {
+                const stateIndicator = document.createElement('span');
+                addPlayingStatusIcon(stateIndicator);   
+                playerContainer.appendChild(stateIndicator);
+            } else if (player_.PLAYER_STATE === PlayerState.WIN) {
+                const stateIndicator = document.createElement('span');
+                addNullPlayingStatusIcon(stateIndicator);   
+                playerContainer.appendChild(stateIndicator);
+            } else if (player_.PLAYER_STATE === PlayerState.LOST) {
+                playerName.style.textDecoration = 'line-through';
+                playerName.setAttribute('title', 'LOST');
+                const stateIndicator = document.createElement('span');
+                addNullPlayingStatusIcon(stateIndicator);   
+                playerContainer.appendChild(stateIndicator);
+            } else {
+                const stateIndicator = document.createElement('span');
+                addNullPlayingStatusIcon(stateIndicator);   
+                playerContainer.appendChild(stateIndicator);
+            }
+    
+            if (myPlayer !== null && myPlayer.getPlayerID() === player_.PLAYER_ID) {
+                playerName.style.fontWeight = 'bold';
+                playerContainer.style.border = '2px solid white'
+            }
+    
+            fragment.appendChild(playerContainer);
+        });
+    
+        tableLeaderboard.appendChild(fragment); // Batch update for performance
     });
+}
 
-    tableLeaderboard.appendChild(fragment); // Batch update for performance
+function addPlayingStatusIcon(stateIndicator) {
+    stateIndicator.innerHTML = " \
+        <svg class=\"w-6 h-6 text-gray-800 dark:text-white\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" fill=\"none\" viewBox=\"0 0 24 24\"> \
+            <path stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z\"/> \
+        </svg> \
+    "
+
+    stateIndicator.style.margin = '10px';
+    stateIndicator.style.background = 'transparent';
+    stateIndicator.style.color = 'var(--text-color)';
+    stateIndicator.title = 'Waiting player to finish the move';
+}
+
+function addNullPlayingStatusIcon(stateIndicator) {
+    stateIndicator.innerHTML = " \
+        <svg class=\"w-6 h-6 text-gray-800 dark:text-white\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" fill=\"none\" viewBox=\"0 0 24 24\"> \
+        </svg> \
+    "
+
+    stateIndicator.style.margin = '10px';
+    stateIndicator.style.background = 'transparent';
+    stateIndicator.style.color = 'var(--text-color)';
+    stateIndicator.title = 'Waiting player to finish the move';
 }
 
 function updateMyPlayer(playersMeta_) {
@@ -877,7 +944,7 @@ function updateGame(gameMeta) {
             break;
         case (GameState.GAME_STARTED):
             console.log('Game started!', oldGameState)
-            if (oldGameState !==GameState.GAME_STARTED) {
+            if (oldGameState !== GameState.GAME_STARTED) {
                 console.log('Game has been started!')
                 requestUpdate();
             }

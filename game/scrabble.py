@@ -22,6 +22,7 @@ class GameMeta:
 class Scrabble(Subject):
     default_lang = LANG_KEYS.ENG
     BINGO_BONUS: int = 25
+    MAX_SKIP_TURN: int = 2
 
     def __init__(self, socketio: SocketIO, player_count=MIN_PLAYER_COUNT):
         super().__init__()
@@ -51,6 +52,8 @@ class Scrabble(Subject):
         self.__computer_player_names: List[str] = COMPUTER_PLAYER_NAMES[:]
         random.shuffle(self.__computer_player_names)
         self.__computer_player_count = 0
+
+        self.__skip_turn_counter: Dict[str, int] = {}  # This container will track the skip turns of each player (player_id, skip_count)
 
     # Getter and Setter for Game Properties
 
@@ -96,6 +99,8 @@ class Scrabble(Subject):
 
         self.__players.append(player)
         self.__active_player_count += 1
+
+        self.__skip_turn_counter[player.get_player_id()] = 0
 
         self.attach(player)  # Attach the player to the observer list
         print(f"A new player with id of {player.get_player_id()} created.")
@@ -189,7 +194,7 @@ class Scrabble(Subject):
         self.__turn_count = -1
 
     def is_all_players_ready(self) -> bool:
-        if len(self.__players) == 0: return False
+        if not len(self.__players) == self.__player_count: return False
 
         for player in self.__players:
             if not player.get_player_state() == PlayerState.LOBBY_READY:
@@ -227,6 +232,7 @@ class Scrabble(Subject):
         # If all players in ready state (aka entered the game), 
         # then set all players state to waiting
         for player in self.__players:
+
             player.set_player_state(PlayerState.WAITING_ORDER)
 
         self.__set_game_state(GameState.PLAYER_ORDER_SELECTION)
@@ -274,17 +280,21 @@ class Scrabble(Subject):
     def submit(self, player_id: str, word: WORD) -> int:
         print(f"Player {player_id} is about to submit the word: {word}")
         if self.__game_state != GameState.GAME_STARTED:
+            print("Submit Failed: Game has not been started yet")
             return 0
         
         player = self.found_player(player_id)
         if player is None:
+            print("Submit Failed: No player found")
             return 0
 
         # Only current player submit its word
         if not (player.get_player_id() == self.__currentPlayer.get_player_id()):
+            print("Submit Failed: Only current player submit its word")
             return 0
 
         if word is None:
+            print("Submit Failed: No word provided")
             return 0
 
         points = self.verify_word(word)
@@ -306,10 +316,14 @@ class Scrabble(Subject):
                 newTile = self.__tile_bag.get_random_tile()
                 player.add_tile(newTile)
 
+            self._reset_skip_counter(player_id)  # Reset skip counter if player submitted valid word
+
             # Finish the turn
             self.next_turn()  # Update the turn count and set the next player
             self.__update()  # Update game state machine 
-        
+        else:
+            print("Submit Failed: Word is illegal")
+
         self.update_clients()  # Notify all clients about the changes
 
         return points
@@ -363,6 +377,8 @@ class Scrabble(Subject):
 
         print(player.get_serialized_rack())
 
+        self._reset_skip_counter(player_id)  # Reset skip counter if player exchange its letter
+
         self.skip_turn(player_id)  # Exchanging letter penalizes the player by skipping the turn
 
         return True
@@ -392,6 +408,8 @@ class Scrabble(Subject):
         player = self.found_player(player_id)
         if player is None: return None
         if not (player.get_player_state() == PlayerState.PLAYING): return None
+        
+        self._increment_skip_counter(player_id)
 
         self.next_turn()
         self.__update()
@@ -408,11 +426,25 @@ class Scrabble(Subject):
                 winner = player
         return winner
 
+    def _reset_skip_counter(self, player_id) -> None:
+        self.__skip_turn_counter[player_id] = 0
+
+    def _increment_skip_counter(self, player_id: str) -> None:
+        self.__skip_turn_counter[player_id] += 1
+
+    def _check_skip_counter(self) -> bool:
+        flag = True
+        for player_id, count in self.__skip_turn_counter.items():
+            flag &= True if count == Scrabble.MAX_SKIP_TURN else False 
+        return flag
+
     # Internal Game Actions
 
     def __on_waiting_for_players(self):
         # Check if all players are ready
         if self.is_all_players_ready():
+            for player in self.__players:
+                player.set_player_state(PlayerState.WAITING_ORDER)
             self.__set_game_state(GameState.PLAYER_ORDER_SELECTION)
 
     def __on_player_order_selection(self):
@@ -456,7 +488,20 @@ class Scrabble(Subject):
             #    #self.submit(self.__currentPlayer.get_player_name(), tiles)
         
     def __on_game_over(self):
-        pass
+        # Declare maximum scored player as winner
+        max_score = -1
+        winner_id = ''
+        for player in self.__players:
+            if player.get_points() > max_score:
+                winner_id = player.get_player_id()
+                max_score = player.get_points()
+                player.set_player_state(PlayerState.WON)
+            else:
+                player.set_player_state(PlayerState.LOST)
+
+        players_meta: List[PlayerMeta] = self.get_players_meta()
+        # Notify all players about game is over
+        self.__socketio.emit('game-ended', {"playersMeta": [player.__dict__ for player in players_meta], "winnerId": winner_id})
     
     def __update(self) -> None:
         print(f"__update called", {GameState.to_string(self.__game_state)})
@@ -472,7 +517,6 @@ class Scrabble(Subject):
             raise ValueError("Invalid game state")
 
         self.update_clients()
-        print(f"Notifying allll {GameState.to_string(self.__game_state)}")
         self.notify_all(self.__game_state)  # Notify all players about the game state
 
     def __check_game_over(self) -> bool:
@@ -485,16 +529,19 @@ class Scrabble(Subject):
         if (self.__active_player_count <= 1):
             return True
 
-        if (self.__tile_bag.get_remaining_tiles() == 0):
+        if (self._check_skip_counter()):
             return True
-        
-        skip_count_flag = True
+
+        # If game has not been strated yet, no need to check players' rack
+        if self.__turn_count <= 0:
+            return False
+
+        # If one of the rack of any player is empty then game is over
+        is_empty_rack = False
         for player in self.__players:
-            if player.get_skip_count() >= 2:
-                skip_count_flag &= True
-            else:
-                skip_count_flag &= False
-        if skip_count_flag:
+            is_empty_rack |= True if len(player.get_rack()) == 0 else False
+        
+        if is_empty_rack:
             return True
         
         return False

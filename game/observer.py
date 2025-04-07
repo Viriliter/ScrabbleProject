@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
+import threading
 
 class Subject:
     """
@@ -16,7 +17,6 @@ class Subject:
         if observer not in self._observers:
             observer.set_subject(self)
             self._observers.append(observer)
-            observer.listen(self)  # Allow observer to listen to the subject
 
     def detach(self, observer: 'Observer') -> None:
         """Detach an observer from the subject."""
@@ -26,13 +26,12 @@ class Subject:
     def notify(self, observer: 'Observer', message: any) -> None:
         """Notify specific observer."""
         if observer in self._observers:
-            observer.listen(message)
-            return
+            threading.Thread(target=observer.listen, args=(message,), daemon=True).start()
 
     def notify_all(self, message: any) -> None:
         """Notify all observers."""
         for observer in self._observers:
-            observer.listen(message)
+            threading.Thread(target=observer.listen, args=(message,), daemon=True).start()
 
 
 class Observer(ABC):

@@ -134,6 +134,10 @@ def create_new_game() -> Response:
             player_id = game.create_player(PlayerType.COMPUTER)
             if player_id is None:
                 return None
+            # If first player is computer redirect to referee page        
+            #if i == 0:
+            #    timer = threading.Timer(3.0, lambda: redirect(url_for('game', game_id=game_id, player_id="referee")))
+            #    timer.start()
         else:
             continue
 
@@ -253,15 +257,11 @@ def enter_game() -> Response:
     if game is None:
         return jsonify({"status": "error", "message": "Game not found"}), 404
     else :
-        if game.is_game_started():
-            return jsonify({"status": "error", "message": "Game already started"}), 400
-
         # If the player is not entered game, enter it
         is_entered = game.is_player_entered(player_id)
         if not is_entered: 
             is_entered = game.enter_player_to_game(player_id)
-
-        update_lobby(game)
+            update_lobby(game)
 
         if is_entered:
             return redirect(url_for('game', game_id=game_id, player_id=player_id))

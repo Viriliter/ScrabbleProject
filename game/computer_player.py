@@ -9,6 +9,8 @@ from .components import *
 from .player import *
 
 class ComputerPlayer(Player):
+    MAX_CONSECUTIVE_TILE_EXCHANGE = 1
+
     def __init__(self, board: Board, tile_bag: TileBag, name=""):
         super().__init__(board, name)
         self._tile_bag = tile_bag
@@ -23,11 +25,11 @@ class ComputerPlayer(Player):
         self.__observed_tiles = defaultdict(int)  # Observed tiles on game
         self.tiles_in_bag = 0  # Number of tiles in the bag
 
+        self.__consecutive_exchanged_tile = 0
+
     def _listen(self, message: any) -> None:
-        print(f"message: {message}")
-        print(f"Player notification received lock? (Player: {self._player_name} ({self._player_id}) GameState: {GameState.to_string(message)})")
+        print(f"Player notification received (Player: {self._player_name} ({self._player_id}) PlayerState: {PlayerState.to_string(self._player_state)}  GameState: {GameState.to_string(message)})")
         self.lock()  # Prevents recursive calls
-        print(f"Player notification received (Player: {self._player_name} ({self._player_id}) GameState: {GameState.to_string(message)})")
         if message == GameState.WAITING_FOR_PLAYERS:
             if self.get_player_state() == PlayerState.LOBBY_READY or self.get_player_state() == PlayerState.LOBBY_WAITING:
                 self.emit("enter_player_to_game", self._player_id)
@@ -38,19 +40,24 @@ class ComputerPlayer(Player):
             if (self.get_player_state() == PlayerState.PLAYING):
                 _, best_move_word = self.play_turn()
                 if best_move_word is not None:
+                    self.__consecutive_exchanged_tile = 0
                     self.emit("submit", self._player_id, best_move_word)
                 else:
-                    # If no possible moves exist, try to find a sacrificable letter for exchange
-                    letter = self.get_sacrificable_letter()
-                    # If no sacrificable letter is found, then there is no best move so skip turn
-                    is_success = False
-                    if letter is not None:
-                        is_success = self.emit("exchange_letter", self._player_id, letter)
-                        # If exchange failed in some reason, then skip turn
-                        if is_success:
-                            self.unlock() 
-                            return 
+                    # To prevent repeatedly request tile exchange, add threashold. If threashold is exceeded skip the turn.
+                    if self.__consecutive_exchanged_tile < ComputerPlayer.MAX_CONSECUTIVE_TILE_EXCHANGE:
+                        # If no possible moves exist, try to find a sacrificable letter for exchange
+                        letter = self.get_sacrificable_letter()
+                        # If no sacrificable letter is found, then there is no best move so skip turn
+                        is_success = False
+                        if letter is not None:
+                            self.__consecutive_exchanged_tile += 1 
+                            is_success = self.emit("exchange_letter", self._player_id, letter)
+                            # If exchange failed in some reason, then skip turn
+                            if is_success:
+                                self.unlock() 
+                                return 
 
+                    self.__consecutive_exchanged_tile = 0
                     self.emit("skip_turn", self._player_id)
         else:
             pass

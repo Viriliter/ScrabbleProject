@@ -56,7 +56,6 @@ class GameState:
 
     @staticmethod
     def to_string(state: int) -> str:
-        print("state.......:", state)
         state_map = {
             GameState.UNDEFINED: "UNDEFINED",
             GameState.WAITING_FOR_PLAYERS: "WAITING_FOR_PLAYERS",

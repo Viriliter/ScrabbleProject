@@ -151,10 +151,7 @@ class Rack:
         @brief Remove a tile from the rack.
         @param tile: TILE object to be removed
         """
-        print(self.get_rack())
-
         for i, t in enumerate(self.__container):
-            #print(f"{t.letter}({t.is_blank})==={tile.letter}({tile.is_blank})  is_similar:{t.is_similar(tile)}")
             if t.is_similar(tile):
                 del self.__container[i]
                 print(f"Tile removed from rack: row:{tile.row} col:{tile.col} letter:{tile.letter} is_blank:{tile.is_blank}")
@@ -181,14 +178,17 @@ class Rack:
         @brief Serialize the rack to a dictionary representation.
         @return: Dictionary representation of the rack
         """
-        letter_counts = {}
-        for tile in self.__container:
-            if tile.letter in letter_counts:
-                letter_counts[tile.letter] += 1
-            else:
-                letter_counts[tile.letter] = 1
-        return letter_counts
-
+        try:
+            letter_counts = {}
+            for tile in self.__container:
+                if tile.letter in letter_counts:
+                    letter_counts[tile.letter] += 1
+                else:
+                    letter_counts[tile.letter] = 1
+            return letter_counts
+        except:
+            return None
+        
     def clear(self) -> None:
         """
         @brief Clear the rack
