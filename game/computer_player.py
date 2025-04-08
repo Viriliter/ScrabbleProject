@@ -27,14 +27,21 @@ class ComputerPlayer(Player):
 
         self.__consecutive_exchanged_tile = 0
 
+        # Choose their strategies based on their names
+        if self._player_name == "Plato" or self._player_name == "Pythagoras":
+            self.set_player_strategy(PlayerStrategy.GREEDY)
+        else:
+            self.set_player_strategy(PlayerStrategy.BALANCED)
+
     def _listen(self, message: any) -> None:
         print(f"Player notification received (Player: {self._player_name} ({self._player_id}) PlayerState: {PlayerState.to_string(self._player_state)}  GameState: {GameState.to_string(message)})")
-        self.lock()  # Prevents recursive calls
         if message == GameState.WAITING_FOR_PLAYERS:
             if self.get_player_state() == PlayerState.LOBBY_READY or self.get_player_state() == PlayerState.LOBBY_WAITING:
+                time.sleep(1)  # Add some delay, it is necessary to initialize other computer players, and to ensure the syncronization in between them
                 self.emit("enter_player_to_game", self._player_id)
         elif message == GameState.PLAYER_ORDER_SELECTION:
             if (self.get_player_state() == PlayerState.WAITING_ORDER):
+                time.sleep(1)  # Add some delay, it is necessary to initialize other computer players, and to ensure the syncronization in between them
                 letter: LETTER = self.emit("request_play_order", self._player_id)
         elif message == GameState.GAME_STARTED:
             if (self.get_player_state() == PlayerState.PLAYING):
@@ -54,14 +61,12 @@ class ComputerPlayer(Player):
                             is_success = self.emit("exchange_letter", self._player_id, letter)
                             # If exchange failed in some reason, then skip turn
                             if is_success:
-                                self.unlock() 
                                 return 
 
                     self.__consecutive_exchanged_tile = 0
                     self.emit("skip_turn", self._player_id)
         else:
             pass
-        self.unlock()
 
     def play_turn(self) -> Tuple[Optional[int], Optional[WORD]]:
         """
@@ -71,7 +76,7 @@ class ComputerPlayer(Player):
         if not (self._player_state == PlayerState.PLAYING):
             return None, None
         
-        print(f"Rack of Computer player {self._player_name}: {self._rack.stringify()}")
+        #print(f"Rack of Computer player {self._player_name}: {self._rack.stringify()}")
         best_move = self.choose_best_move()
         print(f"Best move: {best_move}")
         if best_move is None or len(best_move.word) == 0:

@@ -2,6 +2,7 @@ from flask_socketio import SocketIO, emit
 
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
+from threading import Thread, Lock
 
 from game.computer_player import ComputerPlayer
 from game.human_player import HumanPlayer
@@ -187,6 +188,17 @@ class Scrabble(Subject):
     def get_board(self) -> Board:
         return self.__board
 
+    def get_serialized_rack(self, player_id: str) -> Optional[Dict[LETTER, int]]:
+        self._mutex.acquire()
+
+        player = self.found_player(player_id)
+        if player is not None:
+            rack = player.get_serialized_rack()
+            self._mutex.release()
+            return rack
+        self._mutex.release()
+        return None
+
     def get_turn_count(self) -> int:
         return self.__turn_count
     
@@ -314,6 +326,9 @@ class Scrabble(Subject):
             # Refill the rack of the player
             for _ in range(letter_count):
                 newTile = self.__tile_bag.get_random_tile()
+                # If no tile left in the bag, do not add
+                if newTile is None:
+                    break
                 player.add_tile(newTile)
 
             self._reset_skip_counter(player_id)  # Reset skip counter if player submitted valid word
@@ -435,7 +450,7 @@ class Scrabble(Subject):
     def _check_skip_counter(self) -> bool:
         flag = True
         for player_id, count in self.__skip_turn_counter.items():
-            flag &= True if count == Scrabble.MAX_SKIP_TURN else False 
+            flag &= True if count >= Scrabble.MAX_SKIP_TURN else False 
         return flag
 
     # Internal Game Actions
@@ -504,7 +519,6 @@ class Scrabble(Subject):
         self.__socketio.emit('game-ended', {"playersMeta": [player.__dict__ for player in players_meta], "winnerId": winner_id})
     
     def __update(self) -> None:
-        print(f"__update called", {GameState.to_string(self.__game_state)})
         if self.__game_state == GameState.WAITING_FOR_PLAYERS:
             self.__on_waiting_for_players()
         elif self.__game_state == GameState.PLAYER_ORDER_SELECTION:

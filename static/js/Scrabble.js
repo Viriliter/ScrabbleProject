@@ -436,13 +436,13 @@ function showGameOverDialog(data) {
     updatePlayers(playersMeta)
 
     dialog = document.getElementById('myGameOverDialog');
-    victoryPanel = document.getElementById('victoryPanel');
+    labelVictoryStatus = document.getElementById('labelVictoryStatus');       
+    
     if (winnerId == myPlayer.getPlayerID()) {
-        victoryPanel.style.visibility = 'visible'
-        
         const canvas = document.getElementById('confetti-canvas');
         const confettiInstance = confetti.create(canvas, { resize: true, useWorker: true });
-        
+
+        labelVictoryStatus.innerText = 'Congratulations! You won 🎉';
 
         // Trigger confetti burst
         confettiInstance({
@@ -467,6 +467,8 @@ function showGameOverDialog(data) {
         dialog.addEventListener('close', () => {
             clearInterval(sparkleInterval);
         }, { once: true });
+    } else {
+        labelVictoryStatus.innerText = 'You lost';
     }
 
     dialog.showModal();  // Opens the dialog as a modal
@@ -715,7 +717,6 @@ function submitWord(tiles=[]) {
         if (data.status === 'success') {
             // Update the points box with the calculated points
             if (data.points>0) {
-                document.getElementById('remainingTiles').textContent = data.points;
                 updateTentativePoints(0);  // This will clear tentative points
                 clearSelectedTile();
             } else {
@@ -901,7 +902,7 @@ function updateMyPlayer(playersMeta_) {
             }
             
             // Block all user actions
-            if (player_.PLAYER_TYPE == PlayerType.COMPUTER) {
+            if (player_.PLAYER_TYPE === 'COMPUTER') {
                 returnLobbyButton.classList.add('blocked');
                 requestOrderButton.classList.add('blocked');
                 exchangeButton.classList.add('blocked');

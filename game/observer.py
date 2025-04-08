@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-import threading
+from threading import Thread, Lock
 
 class Subject:
     """
@@ -11,6 +11,7 @@ class Subject:
     """
     def __init__(self):
         self._observers: List[Observer] = []
+        self._mutex = Lock()
 
     def attach(self, observer: 'Observer'):
         """Attach an observer to the subject."""
@@ -26,12 +27,12 @@ class Subject:
     def notify(self, observer: 'Observer', message: any) -> None:
         """Notify specific observer."""
         if observer in self._observers:
-            threading.Thread(target=observer.listen, args=(message,), daemon=True).start()
+            Thread(target=observer.listen, args=(message,), daemon=True).start()
 
     def notify_all(self, message: any) -> None:
         """Notify all observers."""
         for observer in self._observers:
-            threading.Thread(target=observer.listen, args=(message,), daemon=True).start()
+            Thread(target=observer.listen, args=(message,), daemon=True).start()
 
 
 class Observer(ABC):
@@ -56,7 +57,10 @@ class Observer(ABC):
             method = getattr(self._subject, function_name, None)
             if callable(method):
                 try:
-                    return method(*args)
+                    self.lock()  # Prevents recursive calls
+                    r = method(*args)
+                    self.unlock()
+                    return r
                 except Exception as e:
                     print(f"Error: {e}")
             else:

@@ -436,3 +436,13 @@ dialog::backdrop {
 .back-to-lobby-cancel-btn:hover {
     background-color: #505050;
 }
+
+.confetti-canvas {
+    position: fixed;
+    width: -webkit-fill-available;
+    height: -webkit-fill-available;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 1000;
+}

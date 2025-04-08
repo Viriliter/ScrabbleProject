@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/scrabble.css') }}">
 
     <script src="{{ url_for('static', filename='libs/canvas-confetti/confetti.browser.min.js') }}"></script> 
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='libs/socket-io/socket.io.min.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/Game.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/Player.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/Scrabble.js') }}"></script> 
@@ -115,15 +115,6 @@
         }
         #returnLobbyButton:hover {
             background-color: #f25433; /* Light blue background */
-        }
-        #confetti-canvas {
-            position: fixed;
-            width: -webkit-fill-available;
-            height: -webkit-fill-available;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            z-index: 1000;
         }
     </style>
 </head>
@@ -334,14 +325,14 @@
         </div>
     </dialog>
     <dialog id="myGameOverDialog" style="padding: 0px;">
-        <div id="victoryPanel" style="visibility: collapse;">
-            <h1>Congratulations. You won 🎉</h1>
-            <button id="myGameOverDialogCloseBtn">Close</button>
-        </div>
-        <div class="leader-board" style="margin-top: 80px;">
+        <div class="leader-board" style="margin: 0px;">
+            <div id="victoryPanel" style="margin: 20px;">
+                <h1 id="labelVictoryStatus" style="color: var(--text-color); text-align: center;"></h1>
+                <button class="back-to-lobby-yes-btn" id="myGameOverDialogCloseBtn">Close</button>
+            </div>   
             <div class="leader-board-table" id="tableGameOverLeaderboard"></div>
         </div>
-        <canvas id="confetti-canvas"></canvas>
+        <canvas class="confetti-canvas"></canvas>
     </dialog>
 </body>
 

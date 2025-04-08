@@ -120,7 +120,13 @@ function createNewGame() {
         },
         body: playerTypesJson
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else {
+            return response.json();
+        }
+    })
     .then(data => {
         if (data.status === 'success') {
             if (myGame !== null) {

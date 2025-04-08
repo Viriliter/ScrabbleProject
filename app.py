@@ -482,7 +482,7 @@ def quit_game(game_id: str, player_id: str) -> Response:
     game = get_game(game_id)
     if game is not None:
         player = game.found_player(player_id)
-        if player is not None and player.get_player_type() == PlayerType.HUMAN:
+        if player is not None:
             is_kicked = game.kick_player(player_id)
             if is_kicked:
                return redirect('/')

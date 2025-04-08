@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/scrabble.css') }}">
 
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='libs/canvas-confetti/confetti.browser.min.js') }}"></script> 
+    <script src="{{ url_for('static', filename='libs/socket-io/socket.io.min.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/Game.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/Player.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/Scrabble.js') }}"></script> 
@@ -364,14 +365,14 @@
         </div>
     </div>
     <dialog id="myGameOverDialog" style="padding: 0px;">
-        <div id="victoryPanel" style="visibility: collapse;">
-            <h1>Congratulations. You won 🎉</h1>
-            <button id="myGameOverDialogCloseBtn">Close</button>
-        </div>
-        <div class="leader-board" style="margin-top: 80px;">
+        <div class="leader-board" style="margin: 0px;">
+            <div id="victoryPanel" style="margin: 20px;">
+                <h1 id="labelVictoryStatus" style="color: var(--text-color); text-align: center;"></h1>
+                <button class="back-to-lobby-yes-btn" id="myGameOverDialogCloseBtn">Close</button>
+            </div>   
             <div class="leader-board-table" id="tableGameOverLeaderboard"></div>
         </div>
-        <canvas id="confetti-canvas"></canvas>
+        <canvas class="confetti-canvas"></canvas>
     </dialog>
 </body>
 
@@ -500,9 +501,10 @@ socket.on('game-ended', function(data) {
     updatePlayers(playersMeta)
 
     dialog = document.getElementById('myGameOverDialog');
-    victoryPanel = document.getElementById('victoryPanel');
-    victoryPanel.style.visibility = 'visible'
-    
+
+    labelVictoryStatus = document.getElementById('labelVictoryStatus');       
+    labelVictoryStatus.innerText = 'Game Ended';
+
     const canvas = document.getElementById('confetti-canvas');
     const confettiInstance = confetti.create(canvas, { resize: true, useWorker: true });
     

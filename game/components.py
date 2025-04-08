@@ -154,7 +154,6 @@ class Rack:
         for i, t in enumerate(self.__container):
             if t.is_similar(tile):
                 del self.__container[i]
-                print(f"Tile removed from rack: row:{tile.row} col:{tile.col} letter:{tile.letter} is_blank:{tile.is_blank}")
                 return
 
         # Remove joker tile if provided tile does not match with the tiles in the rack
@@ -724,13 +723,15 @@ class Board:
 
             o_words: List[Dict[str, int]] = []
             completed_word = self.complete_word(sorted_[0].row, sorted_[0].col, 0, 1, sorted_)
+            completed_word = sorted(completed_word, key=lambda x: x.col, reverse=False)
 
-            score = self.score_play(completed_word[-1].row, completed_word[-1].col, 0, 1, completed_word, o_words)
+            score, o_words = self.score_play(completed_word[-1].row, completed_word[-1].col, 0, 1, completed_word)
             #print(f"Horizontal Score: {score} words : {o_words}")
             # Check all founded words are valid
             flag = True
             for t_word in o_words:
                 flag &= self.__dictionary.has_word(t_word['word'])
+            if not flag: print(f"Some cross-checked words are invalid: {t_word['word']} completed_word: {completed_word}")
 
             return score if flag else 0
         elif (direction == Board.Direction.Vertical):
@@ -738,15 +739,19 @@ class Board:
 
             o_words: List[Dict[str, int]] = []
             completed_word = self.complete_word(sorted_[0].row, sorted_[0].col, 1, 0, sorted_)
-            score = self.score_play(completed_word[-1].row, completed_word[-1].col, 1, 0, completed_word, o_words)
+            completed_word = sorted(completed_word, key=lambda x: x.row, reverse=False)
+            
+            score, o_words = self.score_play(completed_word[-1].row, completed_word[-1].col, 1, 0, completed_word)
             #print(f"Vertical Score: {score} words : {o_words}")
             # Check all founded words are valid
             flag = True
             for t_word in o_words:
                 flag &= self.__dictionary.has_word(t_word['word'])
+            if not flag: print(f"Some cross-checked words are invalid: {t_word['word']} completed_word: {completed_word}")
 
             return score if flag else 0
         else:  # Undefined direction
+            print(f"Undefined direction for word: {word}")
             return 0
 
     def clear(self) -> None:
@@ -868,7 +873,7 @@ class Board:
         print(f"Total optimal words: {len(self.best_moves)}")
         print(f"Total duration (ms): {(time.perf_counter_ns()-self.debug_time_start_ns)/1000000}")
 
-    def score_play(self, row: int, col: int, drow: int, dcol: int, tiles: List[TILE], words: Optional[List[Dict[str, int]]] = None) -> int:
+    def score_play(self, row: int, col: int, drow: int, dcol: int, tiles: List[TILE]) -> Tuple[int, List[Dict[str, int]]]:
         """
         @brief Given a play at col, row, compute it's score. Used in
         findBestPlay, and must perform as well as possible.
@@ -879,13 +884,13 @@ class Board:
         @param drow: 1 if the word is being played down
         @param dcol: 1 if the word being played across
         @param tiles: a list of tiles that are being placed
-        @param words: optional list to be populated with words that have been created by the play
-        @return: the score of the play.
+        @return: Tupple of the score of the play and optional list to be populated with words that have been created by the play.
         """
         word_score = 0
         cross_words_score = 0
         word_multiplier = 1
         alphabet: ALPHABET = self.__dictionary.get_alphabet()
+        o_words: List[Dict[str, int]] = []
 
         # One behind first tile offset
         c = col - dcol * len(tiles)
@@ -935,16 +940,16 @@ class Board:
                 # This tile (and bonuses) contribute to cross words
                 cross_word_score += letter_score
                 cross_word_score *= wm
-                if words is not None:
-                    words.append({"word": cross_word, "score": cross_word_score})
+                if o_words is not None:
+                    o_words.append({"word": cross_word, "score": cross_word_score})
                 cross_words_score += cross_word_score
 
         word_score *= word_multiplier
 
-        if words is not None:
-            words.append({"word": "".join(tile.letter for tile in tiles), "score": word_score})
+        if o_words is not None:
+            o_words.append({"word": "".join(tile.letter for tile in tiles), "score": word_score})
 
-        return word_score + cross_words_score
+        return (word_score + cross_words_score, o_words)
 
     @staticmethod
     def intersection(a: List[str], b: List[str]) -> List[str]:
@@ -1035,42 +1040,29 @@ class Board:
         @param word: List of TILE objects representing the known word part.
         @return: Completed list of TILE objects forming the full word.
         """
-        frow = row-drow  # Move left of the first letter
-        fcol = col-dcol  # Move up of the first letter
-
         completed_word: List[TILE] = copy.deepcopy(word)
 
-        # Move left or up, to find index of first letter in the word
-        while(frow>=0 and fcol>=0):
-            if self.__cells.is_empty(frow, fcol):
-                frow += drow
-                fcol += dcol
-                break
+        # Step 1: Extend backwards from the first tile in the word
+        start = completed_word[0]
+        frow, fcol = start.row - drow, start.col - dcol
 
-            completed_word.insert(0, TILE(frow, fcol, self.__cells.at(frow, fcol).letter))
+        while 0 <= frow < self.__cells.rows and 0 <= fcol < self.__cells.cols:
+            tile = self.__cells.at(frow, fcol)
+            if tile is None or self.__cells.is_empty(frow, fcol):
+                break
+            completed_word.insert(0, TILE(frow, fcol, tile.letter))
             frow -= drow
             fcol -= dcol
 
-        if drow==1:  # Vertical word
-            completed_word = sorted(completed_word, key=lambda x: x.col, reverse=True)
-        else:  # Horizontal word
-            completed_word = sorted(completed_word, key=lambda x: x.row, reverse=True)
+        # Step 2: Extend forwards from the last tile in the word
+        end = completed_word[-1]
+        frow, fcol = end.row + drow, end.col + dcol
 
-        i = 0  # index to insert new letters 
-        while (frow < self.__cells.rows and fcol < self.__cells.cols):
-            if (i >= len(completed_word)):
-                tile = self.__cells.at(frow, fcol)
-                if tile is None:
-                    return completed_word
-                completed_word.insert(i, tile)
-            else:
-                if not(completed_word[i].row == frow and completed_word[i].col == fcol):
-                    tile = self.__cells.at(frow, fcol)
-                    if tile is None:
-                        return completed_word
-                    completed_word.insert(i, tile)
-                i += 1
-            
+        while 0 <= frow < self.__cells.rows and 0 <= fcol < self.__cells.cols:
+            tile = self.__cells.at(frow, fcol)
+            if tile is None or self.__cells.is_empty(frow, fcol):
+                break
+            completed_word.append(TILE(frow, fcol, tile.letter))
             frow += drow
             fcol += dcol
 
@@ -1192,9 +1184,8 @@ class Board:
         # Tail recursion
         if (d_node.isEndOfWord and len(word_so_far) >= 2 and tiles_played > 0 and
             (ecol == self.cols or erow == self.rows or self.__cells.is_empty(erow, ecol))):
-            words = []
-
-            score = self.score_play(row, col, drow, dcol, word_so_far, words)
+            
+            score, _ = self.score_play(row, col, drow, dcol, word_so_far)
 
             if self.is_debug_enabled and score > 0: self.debug_total_move_count += 1
 
@@ -1347,7 +1338,7 @@ class Board:
             mid = self.midcol if vertical else self.midrow
             for end in range(mid, mid + len(choice)):
                 row, col = (mid, end) if vertical else (end, mid)
-                score = self.score_play(row, col, drow, dcol, placements)
+                score, _ = self.score_play(row, col, drow, dcol, placements)
                 score += self.calculate_bonus(len(placements))
                 
                 if score > best_score:
